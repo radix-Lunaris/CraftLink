@@ -30,19 +30,19 @@
 
 ### OpenClash 对照复测
 
-先将 `www.example.invalid` 加入 Fake-IP 排除，并为它添加高优先级 DIRECT 路由，然后刷新相关 DNS 缓存、重启工具。保留其余配置。Fake-IP 排除和 DIRECT 是两个不同配置项；前者让客户端取得真实目的地址，后者决定转发出口。[Mihomo DNS 文档](https://wiki.metacubex.one/config/dns/)、[路由规则文档](https://wiki.metacubex.one/config/rules/)说明了这两个设置。
+先将 `relay.example.invalid` 加入 Fake-IP 排除，并为它添加高优先级 DIRECT 路由，然后刷新相关 DNS 缓存、重启工具。保留其余配置。Fake-IP 排除和 DIRECT 是两个不同配置项；前者让客户端取得真实目的地址，后者决定转发出口。[Mihomo DNS 文档](https://wiki.metacubex.one/config/dns/)、[路由规则文档](https://wiki.metacubex.one/config/rules/)说明了这两个设置。
 
 默认 blacklist 模式下，将以下条目合并到已有配置，不覆盖已有列表：
 
 ```yaml
 dns:
   fake-ip-filter:
-    - 'www.example.invalid'
+    - 'relay.example.invalid'
 rules:
-  - DOMAIN,www.example.invalid,DIRECT
+  - DOMAIN,relay.example.invalid,DIRECT
 ```
 
-如果现有 fake-ip-filter-mode 是 rule，过滤列表应改加 `DOMAIN,www.example.invalid,real-ip`，不能照搬 blacklist 条目。whitelist 模式的匹配含义与 blacklist 相反，应按现有模式配置。先以实际 DNS 结果和网络报告确认生效，而不是仅看规则已保存。
+如果现有 fake-ip-filter-mode 是 rule，过滤列表应改加 `DOMAIN,relay.example.invalid,real-ip`，不能照搬 blacklist 条目。whitelist 模式的匹配含义与 blacklist 相反，应按现有模式配置。先以实际 DNS 结果和网络报告确认生效，而不是仅看规则已保存。
 
 复测依次看：域名是否还返回 198.18/15、UDP 3478/3479 是否收到应答、默认 NAT 测量是否得到公网端点、随后候选交换／打洞能否完成。如果 NAT 已正常但 P2P 仍失败，再检查两台测试设备对彼此公网端点的 UDP 路由；仅给 STUN 域名配置 DIRECT 并不自动覆盖任意端口的玩家 P2P 流量。
 

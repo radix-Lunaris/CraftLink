@@ -34,7 +34,8 @@ def run(capture=None):
                     capture.mkdir(parents=True,exist_ok=True)
                     root.lift();root.update();time.sleep(.3);root.update()
                     x,y=root.winfo_rootx(),root.winfo_rooty()
-                    ImageGrab.grab(bbox=(x,y,x+root.winfo_width(),y+root.winfo_height())).save(capture/(name+'.png'))
+                    from ui_capture import save_window
+                    save_window(root,capture/(name+'.png'))
             for theme in ('light','dark'):
                 app.config.ui_theme=theme;app._apply_appearance();app._rebuilding=True
                 assert app.header_room_label.cget('corner_radius')>=10

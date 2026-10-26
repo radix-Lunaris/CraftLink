@@ -182,7 +182,7 @@ class NetworkStartupTests(unittest.IsolatedAsyncioTestCase):
         reader, writer = await asyncio.open_connection("127.0.0.1", self.port)
         self.writers.append(writer)
         # Knowing member IDs/capabilities is insufficient to impersonate Host.
-        writer.write(b"AUTO_NETWORK auto-test player player wrong side=host peer=host caps=auto_stream_v1 ver=5.1.2\n")
+        writer.write(b"AUTO_NETWORK auto-test player player wrong side=host peer=host caps=auto_stream_v1 ver=5.1.3\n")
         await writer.drain()
         self.assertEqual((await reader.readline()).strip(), b"ERROR AUTO_NETWORK_DENIED")
 

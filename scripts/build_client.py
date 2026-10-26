@@ -73,7 +73,8 @@ def main():
                     cwd=tmp, creationflags=flags, capture_output=True, timeout=45)
                 state = json.loads(report.read_text(encoding="utf-8")) if report.exists() else {}
                 if (checked.returncode or state.get("version") != APP_VERSION
-                        or state.get("revision") != APP_REVISION or state.get("self_test") != "ok"):
+                        or state.get("revision") != APP_REVISION or state.get("self_test") != "ok"
+                        or state.get("external_address_profile_loaded") is not False):
                     print(f"{name} frozen self-test failed: {checked.stderr.decode(errors='replace')[-2000:]}")
                     return 1
                 destination = output / built.name

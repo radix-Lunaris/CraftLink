@@ -62,7 +62,10 @@ def main():
                     root.destroy()
                     import logging
                     logging.shutdown()
+        from mclink.config import defaults
         result = {"ui": "customtkinter", "ui_smoke": "ok", "version": APP_VERSION, "revision": APP_REVISION,
+                  "external_address_profile_loaded": bool(defaults._PROFILE),
+                  "public_placeholder_defaults": defaults.DEFAULT_SERVER_HOST == defaults.PUBLIC_SERVER_HOST and defaults.UPDATE_URL == defaults.PUBLIC_UPDATE_URL,
                   "protocol": CAPABILITY, "self_test": "ok"}
         encoded = json.dumps(result, ensure_ascii=False)
         if args.self_test_report:

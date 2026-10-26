@@ -2,7 +2,7 @@
 
 通用 TCP 端口联机工具，包含桌面客户端、房间管理、中继和管理面板。Minecraft 是使用场景之一，隧道建立不依赖游戏运行。
 
-当前开发候选 **v5.1.2**；在本地 `dev` 开发，尚未完成用户 VPS 验收，当前源码未上传远端。新版仅调整六项桌面显示与操作引导，见 [变更说明](docs/V5.1.2-CHANGES.md)。
+当前开发候选 **v5.1.3**；在本地 `dev` 开发，尚未完成用户 VPS 验收，当前源码未上传远端。本版完成自有地址隐私配置，继承六项桌面优化；见 [隐私配置说明](docs/V5.1.3-PRIVACY.md)。
 
 ## 开发
 
@@ -15,7 +15,7 @@ python -B scripts/audit_ui.py
 ```
 
 原有用户配置目录和 client_id 不变。用户配置可增加 `update_url`（HTTPS），服务器地址和端口沿用已有字段。
-首次启动／恢复默认使用统一公共默认值，可通过进程环境 `MCLINK_DEFAULT_SERVER_HOST`、`MCLINK_DEFAULT_SERVER_PORT`、`MCLINK_UPDATE_URL` 调整，不含数据库或管理凭据。
+公开源码默认使用不可路由的 `.invalid` 示例地址。自用地址可通过外部 `client-profile.local.json` 或环境变量提供，读取顺序及打包边界见 [隐私配置说明](docs/V5.1.3-PRIVACY.md)。已有用户设置不重置，私有地址不会编译进公开 EXE。
 
 ## 部署与已有配置迁移
 

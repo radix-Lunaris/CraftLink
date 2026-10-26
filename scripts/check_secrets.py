@@ -1,6 +1,7 @@
 """Scan staged blobs/history, without displaying matched credential values."""
 import argparse
 import ast
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -19,8 +20,8 @@ def findings(name, content, known=()):
     text = content.decode('utf-8', errors='replace')
     found = []
     for secret in known:
-        if secret and secret.encode() in content:
-            found.append('known-deployment-credential')
+        if secret and secret.encode().lower() in content.lower():
+            found.append('known-private-value')
     if TOKEN.search(text):
         found.append('private-key-or-provider-token')
     candidates = []
@@ -53,17 +54,27 @@ def main():
     parser.add_argument('--staged', action='store_true')
     parser.add_argument('--history', action='store_true')
     parser.add_argument('--private-env', type=Path, default=ROOT.parent / 'mclan-private/.env')
+    parser.add_argument('--denylist', type=Path, default=ROOT.parent / 'mclan-private/publication-denylist.json')
     args = parser.parse_args()
     known = []
     if args.private_env.is_file():
         private = read_env(args.private_env)
         known = [private[k] for k in SECRETS if private.get(k)]
+    if args.denylist.is_file():
+        denylist = json.loads(args.denylist.read_text('utf-8-sig'))
+        values = denylist.get('private_values') if isinstance(denylist, dict) else None
+        if not isinstance(values, list) or any(not isinstance(value, str) or not value for value in values):
+            raise SystemExit('私有敏感清单格式无效；停止扫描，不输出内容')
+        known.extend(values)
     blobs = []
     if args.history:
         for row in git('rev-list', '--objects', '--all').decode('utf-8').splitlines():
             oid, _, name = row.partition(' ')
-            if git('cat-file', '-t', oid).strip() == b'blob':
+            kind = git('cat-file', '-t', oid).strip()
+            if kind == b'blob':
                 blobs.append((name or oid, git('cat-file', 'blob', oid)))
+            elif kind == b'commit':
+                blobs.append(('commit:' + oid, git('cat-file', 'commit', oid)))
     elif args.staged:
         names = git('diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z').decode('utf-8').split('\0')
         for name in filter(None, names):
@@ -83,6 +94,10 @@ def main():
                         or basename in ('.device_id', 'settings.json')
                         or basename.startswith('mclink_config') and basename.endswith('.json')
                         or basename == 'config.php'
+                        or basename.endswith(('.local.json', '.bundle', '.gitbundle', '.crt'))
+                        or basename.startswith(('publication-denylist', 'id_rsa', 'id_ed25519'))
+                        or '.private.' in basename
+                        or any(part in ('private', 'mclan-private', '.private') for part in Path(name).parts)
                         or Path(name).suffix in ('.exe', '.pem', '.pfx', '.key'))
         if (args.staged or args.history) and private_path:
             rules.append('private-or-build-file-in-index')

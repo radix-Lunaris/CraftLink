@@ -29,7 +29,7 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.redirect = contextlib.redirect_stdout(self.output)
         self.redirect.__enter__()
         relay.cfg.REQUIRE_ACCOUNT = False
-        relay.cfg.RELAY_VERSION = "5.1.2"
+        relay.cfg.RELAY_VERSION = "5.1.3"
         relay.rooms.clear()
         self.handlers = set()
         def dispatch(r, w):
@@ -392,7 +392,7 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(ok)
         r, w = await asyncio.open_connection("127.0.0.1", self.port)
         self.writers.append(w)
-        w.write(b"JOIN __mclink__ old old - auto-test ver=5.1.2\n")
+        w.write(b"JOIN __mclink__ old old - auto-test ver=5.1.3\n")
         await w.drain()
         self.assertTrue((await r.readline()).startswith(b"OK JOIN"))
         ok, reason = await owner.set_conn_mode("auto")

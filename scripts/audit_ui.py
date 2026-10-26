@@ -30,7 +30,8 @@ def run(capture=None):
                     root.update(); time.sleep(.35); root.update()
                     window=window or root
                     x,y=window.winfo_rootx(),window.winfo_rooty()
-                    ImageGrab.grab(bbox=(x,y,x+window.winfo_width(),y+window.winfo_height())).save(capture/(name+'.png'))
+                    from ui_capture import save_window
+                    save_window(window,capture/(name+'.png'))
             try:
                 app=MCLinkApp(root)
                 # Disable only the test's periodic remote room fetch; no network fixtures.

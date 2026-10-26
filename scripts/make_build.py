@@ -41,7 +41,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #: 注意 `.env` 与 `.env.example` 的区别：`.env` 里有真实凭据，绝不能进包；
 #: `.env.example` 只有占位符，是**要交付**的（服务器上 `cp` 一下就能用）。
 EXCLUDED_DIRS = {
-    ".git", "dist", "build", ".private", ".ui-build-deps", ".githooks", ".github",
+    ".git", "dist", "build", ".private", "private", "mclan-private", ".ui-build-deps", ".githooks", ".github",
     # ------------------------------------------------------------------
     #  ★ v3.9.18：`__pycache__` **不进包**（复核报告 3.4）
     # ------------------------------------------------------------------
@@ -95,10 +95,11 @@ def _unfingerprinted(rel, name):
 
     return False
 
-README_TEMPLATE = """CraftLink v5.1.2 候选部署包（未完成 VPS 验收）
+README_TEMPLATE = """CraftLink v5.1.3 候选部署包（未完成 VPS 验收）
 ================================================================
 源码使用 Git 管理；本包由 scripts/make_build.py 生成。
-当前版本优化六项桌面显示，继承凭据外置和部署配置通用化，网络核心与 v5.1.0 相同。
+当前版本外置自有地址，继承六项桌面优化和凭据外置，网络核心与 v5.1.0 相同。
+公共客户端默认使用示例地址；老用户保留原设置，自用地址文件只在私有分发目录。
 
 已有部署必须先备份并保值迁移，不能先覆盖旧 Compose：
   1. 单独上传 scripts/deploy_config.py 和 scripts/migrate_config.py 到临时目录。
@@ -112,7 +113,7 @@ README_TEMPLATE = """CraftLink v5.1.2 候选部署包（未完成 VPS 验收）
 私有配置不在本包中，严禁将其补进公共压缩包。
 客户端运行 CraftLink.exe；控制台排查使用 CraftLink-console.exe。
 源码运行先 pip install -r requirements.txt，再 python client/main.py。
-中继和两端客户端同步更新为 5.1.2；面板源码不变，复用原 5.1.1 面板镜像。
+中继和两端客户端同步更新为 5.1.3；面板源码不变，复用原 5.1.1 面板镜像。
 本版未部署 VPS、源码未上传；远端 master/dev 只有空初始化提交，legacy 保留旧历史。
 用户验收后另行授权发布源码和正式版本标签。
 
@@ -142,6 +143,7 @@ def package_files(root=ROOT):
             rel_candidate = os.path.relpath(os.path.join(dirpath, name), root).replace(os.sep, "/")
             private = (name.startswith(".env") and name != ".env.example" or name.endswith((".env", ".bak", ".pem", ".key", ".pfx", ".p12", ".migration-tmp")) or name == "config.local.php" or name == "config.php")
             private = private or (name.startswith("mclink_config") and name.endswith(".json")) or name.startswith("credentials.dat")
+            private = private or name.endswith((".local.json", ".bundle", ".gitbundle", ".crt")) or name.startswith(("publication-denylist", "id_rsa", "id_ed25519")) or ".private." in name
             if private or name in EXCLUDED_FILES:
                 continue
 
