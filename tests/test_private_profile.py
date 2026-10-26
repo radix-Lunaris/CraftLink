@@ -55,7 +55,7 @@ class PrivateProfileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); config = root / 'MC-Link/mclink_config.json'; config.parent.mkdir()
             config.write_text(json.dumps({'server_host':'saved.example.test','server_port':29100,'client_id':'unchanged-identity'}), 'utf-8')
-            result = self.read_defaults(extra={'APPDATA':directory,'LOCALAPPDATA':directory}, load_existing=True)
+            result = self.read_defaults(extra={'APPDATA':directory,'LOCALAPPDATA':directory,'XDG_CONFIG_HOME':directory}, load_existing=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout), ['saved.example.test',29100,'unchanged-identity'])
 

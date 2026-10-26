@@ -32,6 +32,8 @@ legacy 固定在 `48f138dcb8a650b5f68ea6e3dc6231205cbfc090`，标签 `archive/le
 
 ## 本地设置
 
+2026-10-27 按用户要求，master 单独添加原 legacy 的 GPLv3 LICENSE；文件 Git blob 与 dev、legacy 都是 `94a9ed024d3859793618152ea559a168bbcbb5e2`。默认分支仍未放应用源码。CI 修复仅涉及运行编码与测试配置／启动顺序，应用版本保持 5.1.3，未生成新的客户端业务版本。
+
 仓库局部设置：`core.autocrlf=false`、`core.hooksPath=.githooks`、`pull.ff=only`，不改全局 Git 身份和凭据管理器。
 
 普通源码／Shell 使用 LF，批处理使用 CRLF。`auto_udp.py` 在原交付中含混合行尾，为满足 29 核心文件字节冻结，单独标记 `-text`；不对它做换行标准化。

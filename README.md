@@ -2,7 +2,7 @@
 
 通用 TCP 端口联机工具，包含桌面客户端、房间管理、中继和管理面板。Minecraft 是使用场景之一，隧道建立不依赖游戏运行。
 
-当前开发候选 **v5.1.3**；源码在 `dev` 分支开发，尚未完成用户 VPS 验收。本版完成自有地址隐私配置，继承六项桌面优化；见 [隐私配置说明](docs/V5.1.3-PRIVACY.md)。完整网络回归仍有未通过用例，当前不是正式发行。
+当前开发候选 **v5.1.3**；源码在 `dev` 分支开发，尚未完成用户 VPS 验收。本版完成自有地址隐私配置，继承六项桌面优化；见 [隐私配置说明](docs/V5.1.3-PRIVACY.md)。最新自动检查结果见 [GitHub Actions](https://github.com/radix-Lunaris/CraftLink/actions/workflows/checks.yml)，当前不是正式发行。
 
 ## 开发
 
@@ -39,9 +39,9 @@ bash /opt/mc-link/rebuild.sh all --prebuilt-panel
 
 - `legacy`：旧远端提交和作者历史冻结归档。
 - `dev`：当前候选开发；只提交源码、资源、模板、测试和必要文档。
-- `master`：远端默认分支，目前为空占位；未来存放通过 VPS 验收的发行源码。
+- `master`：远端默认分支，目前仅含与 legacy 完全相同的 GPLv3 LICENSE；未来存放通过 VPS 验收的发行源码。
 - EXE、镜像及候选包保留在本地忽略目录，未来经明确批准后通过 Release 分发。
-- 远端原 `main` 已改名 `legacy`；`master` 仍为空占位。用户已授权将脱敏源码首次发布至 `dev`，不更新稳定分支或正式标签。
+- 远端原 `main` 已改名 `legacy`；开发源码已发布至 `dev`。默认分支仅补齐原许可证，未发布未经验收的应用源码或正式标签。
 - pre-push 只允许一次授权记录指定的 dev 提交，检查历史敏感值及快进关系；其余推送拒绝。
 
 沿用原仓库 GPLv3 许可证；历史作者及旧发行记录完整保留。见 [LICENSE](LICENSE)。

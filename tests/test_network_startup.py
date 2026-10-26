@@ -160,12 +160,19 @@ class NetworkStartupTests(unittest.IsolatedAsyncioTestCase):
             configs = [dataclasses.replace(e.current_session().config, mode=mode) for e in (host, player)]
             for engine in (host, player):
                 engine.watch_room_nat(False)
+            previous_host_writer = fixtures.relay.rooms["auto-test"].host_writer
             await asyncio.gather(*(asyncio.to_thread(e.stop_session) for e in (host, player)))
-            await asyncio.gather(*(asyncio.to_thread(e.start_session, cfg)
-                                  for e, cfg in zip((host, player), configs)))
-            for engine in (host, player):
+            # Host readiness must precede Player restart, as in start_engines.
+            # Starting both at once can race a legitimate HOST_STOPPED notice
+            # from the previous Host connection on a different event loop.
+            for engine, cfg in zip((host, player), configs):
+                await asyncio.to_thread(engine.start_session, cfg)
                 await asyncio.to_thread(engine.room_set_started, True)
                 engine.watch_room_nat(mode == "stun", log=lambda text: self.output.write(text + "\n"))
+                if engine is host:
+                    await self.ready(lambda: fixtures.relay.rooms["auto-test"].host_writer is not None
+                                     and fixtures.relay.rooms["auto-test"].host_writer is not previous_host_writer)
+                self.assertIsNotNone(engine.current_session(), self.output.getvalue()[-7000:])
                 self.assertIsNone(engine.current_session().core.auto_manager)
                 self.assertEqual(type(engine.room_direct()).__name__, "RoomDirectLink")
             if mode == "stun":
