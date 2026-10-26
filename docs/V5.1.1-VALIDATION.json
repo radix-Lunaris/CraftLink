@@ -98,5 +98,16 @@
   },
   "source_history_secret_scan": "pass",
   "private_config_acl": "current user, SYSTEM, Administrators; inherited child access",
-  "first_source_commit": "7f38bfc2e9702e304771485745a22328aad33f3c"
+  "first_source_commit": "7f38bfc2e9702e304771485745a22328aad33f3c",
+  "shortcut_compatibility": {
+    "shortcut_arguments_and_quoted_home": "pass",
+    "repeat_install_preserves_aliases": "pass",
+    "existing_user_shortcut_preserved": "pass",
+    "global_shortcuts_modified": false
+  },
+  "panel_rebuild_script_final": {
+    "tests": 9,
+    "result": "pass",
+    "log": "logs/panel-script-final.log"
+  }
 }
