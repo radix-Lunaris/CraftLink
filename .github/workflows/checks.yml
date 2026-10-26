@@ -1,0 +1,30 @@
+name: source-checks
+on:
+  push:
+    branches: [dev, master]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r requirements.txt -r server/requirements.txt
+      - run: python -B scripts/check_secrets.py --history
+      - run: python -B tests/run_all.py
+      - run: python -B scripts/make_build.py --clean
+      - run: python -B scripts/check_deploy.py --no-tests --strict-secrets
+      - if: runner.os == 'Windows'
+        run: python -B scripts/audit_ui.py

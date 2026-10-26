@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+*.ico binary
+*.exe binary
+*.gz binary
+*.zip binary
+
+# Frozen baseline contains mixed line endings in this one file; preserve bytes.
+client/mclink/core/auto_udp.py -text

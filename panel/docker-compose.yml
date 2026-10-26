@@ -1,0 +1,101 @@
+# ============================================================
+#  CraftLink Admin Panel  --  Docker Compose
+# ============================================================
+#
+#  部署步骤（详见 docs/DEPLOY_GUIDE.md）：
+#
+#    1. 把整个 panel 目录上传到 /opt/mc-link/panel
+#    2. cp config.sample.php config.php   然后填写三项配置
+#    3. docker compose up -d --build
+#    4. 在 1Panel 建一个网站 + 反向代理到 127.0.0.1:19102
+#    5. 申请 SSL 证书
+#
+#  你的服务器（已用探测脚本确认）：
+#    MySQL 容器 : web-mysql80   @ 1panel-network
+#    中继容器   : mc-relay      @ 1panel-network
+#    nginx      : web-nginx     (host 网络，所以用 127.0.0.1:19102 反代)
+# ============================================================
+
+services:
+  mc-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # apk 软件源。默认清华：本轮大型依赖完整下载对照更快。
+        # 可按服务器网络设置 APK_MIRROR 切换官方或阿里云等源。
+        # 想换源：docker compose build --build-arg APK_MIRROR=mirrors.tuna.tsinghua.edu.cn
+        APK_MIRROR: ${APK_MIRROR:-mirrors.tuna.tsinghua.edu.cn}
+
+    container_name: "${MCLINK_PANEL_CONTAINER:-mc-panel}"
+    image: mc-link-panel:2.0.0
+
+    restart: unless-stopped
+
+    networks:
+      - mclink
+
+    # 只绑定到宿主机回环地址：
+    # web-nginx 反代 127.0.0.1:19102，公网无法直接访问这个端口。
+    ports:
+      - "${MCLINK_PANEL_BIND:-127.0.0.1}:${MCLINK_PANEL_PORT:-19102}:80"
+
+    volumes:
+      # 面板配置放在宿主机上，镜像里不含任何密钥。
+      #
+      # [!] config.php 是**可选**的：
+      #   下面的 environment 已经提供了数据库和中继的全部连接信息，
+      #   所以即使 config.php 不存在、或者被
+      #   `cp config.sample.php config.php` 覆盖成 CHANGE_ME_xxx，
+      #   面板依然能正常工作（标题/session secret 用内置默认值）。
+      #
+      # [!] 权限要求（踩过坑）：
+      #   php-fpm 以 nobody(65534) 运行。如果挂进来的是
+      #   `chmod 600 root:root`，容器读不到，页面会 500。
+      #   正确做法（宿主机执行）：
+      #       chown 65534:65534 config.php && chmod 640 config.php
+      - ./config.php:/var/www/lib/config.php:ro
+      - ./config.local.php:/var/www/lib/config.local.php:ro
+
+    environment:
+      TZ: Asia/Shanghai
+      MCLINK_HOME: "${MCLINK_HOME:-/opt/mc-link}"
+      MCLINK_RELAY_CONTAINER: "${MCLINK_RELAY_CONTAINER:-mc-relay}"
+      MCLINK_PANEL_LOCAL_URL: "http://${MCLINK_PANEL_BIND:-127.0.0.1}:${MCLINK_PANEL_PORT:-19102}"
+
+      # ---- 两端共享根目录 .env，源码不保存凭据 ----
+      # 值必须和 server/docker-compose.yml 里的一致。
+      MCLINK_DB_HOST: "${MCLINK_DB_HOST:-web-mysql80}"
+      MCLINK_DB_PORT: "${MCLINK_DB_PORT:-3306}"
+      MCLINK_DB_NAME: "${MCLINK_DB_NAME:-mclink}"
+      MCLINK_DB_USER: "${MCLINK_DB_USER:-mclink}"
+      MCLINK_DB_PASSWORD: "${MCLINK_DB_PASSWORD:?Missing MCLINK_DB_PASSWORD; run configuration migration first}"
+      MCLINK_RELAY_API_URL: "${MCLINK_RELAY_API_URL:-http://mc-relay:19101}"
+      MCLINK_ADMIN_API_TOKEN: "${MCLINK_ADMIN_API_TOKEN:?Missing MCLINK_ADMIN_API_TOKEN; run configuration migration first}"
+
+      # 面板标题 / session 密钥（可选，留空用内置默认值）
+      # 产品名：MC-Link → CraftLink（方块联机）。
+      # [!] 这台服务器上已经跑着的 compose 文件如果还写着旧名字，改完名字后
+      #     页面顶上仍会是「CraftLink 管理面板」—— 这个环境变量优先于代码里的
+      #     默认值，改名字时这一行必须跟着改。
+      MCLINK_PANEL_TITLE: "${MCLINK_PANEL_TITLE:-CraftLink 管理面板}"
+      MCLINK_PANEL_COPYRIGHT: "${MCLINK_PANEL_COPYRIGHT:-}"
+      MCLINK_PANEL_ICP: "${MCLINK_PANEL_ICP:-}"
+
+    # 内存上限。实测空闲约 25 MB，有人用面板时约 45 MB。
+    # 服务器总内存只有 1.58 GB 且没有 swap，所以卡得比较紧。
+    mem_limit: 128m
+
+    # php-fpm 的 3 个 worker 加起来不超过 90 MB，再加 nginx 约 5 MB，
+    # 128 MB 有足够余量；真超了 Docker 会重启容器而不是拖垮整台机器。
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  mclink:
+    external: true
+    name: "${MCLINK_DOCKER_NETWORK:-1panel-network}"

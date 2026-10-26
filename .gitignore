@@ -1,23 +1,49 @@
-# Python
+# Private deployment and per-user state
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+!*.env.example
+panel/config.php
+**/config.local.php
+mclink_config*.json
+credentials*.json
+.device_id
+settings.json
+*.pem
+*.key
+*.pfx
+*.p12
+*.sqlite*
+# Build/runtime artifacts
 __pycache__/
 *.py[cod]
-*.pyo
 *.egg-info/
 .venv/
 venv/
-
-# PyInstaller output
-dist/
+.ui-build-deps/
+logs/
+status/
+backups/
+data/
+.private/
 build/
-*.spec
-
-# per-machine state -- never share these
-.device_id
-settings.json
+dist/
+*.exe
+*.zip
+*.tar
+*.tar.gz
 *.log
-
-# editors / OS
-.vscode/
-.idea/
+*.bak
+*.dump
+/BUILD.txt
+/README.txt
+/docs/client-artifacts.json
+# Editors / OS
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
+
+*.migration-tmp

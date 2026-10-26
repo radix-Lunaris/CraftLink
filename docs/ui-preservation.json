@@ -1,0 +1,24 @@
+{
+  "baseline": "v5.0.1Full",
+  "release": "v5.1.0Full",
+  "groups": {
+    "client/mclink/core": {
+      "files": 29,
+      "changed": []
+    },
+    "panel": {
+      "files": 22,
+      "changed": []
+    },
+    "server": {
+      "files": 21,
+      "changed": [
+        "server/Dockerfile",
+        "server/VERSION"
+      ]
+    }
+  },
+  "retained_controller_methods": 141,
+  "unchanged_account_methods": 39,
+  "panel_image_unchanged": true
+}

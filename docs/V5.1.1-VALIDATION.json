@@ -1,0 +1,43 @@
+{
+  "version": "5.1.1",
+  "status": "candidate-awaiting-vps",
+  "remote_mutations": false,
+  "production_access": false,
+  "credential_values_preserved": true,
+  "credentials_rotated": false,
+  "network_core_byte_identical_files": 29,
+  "legacy_commit": "48f138dcb8a650b5f68ea6e3dc6231205cbfc090",
+  "regression_initial": {
+    "tests": 63,
+    "seconds": 151.657,
+    "result": "pass"
+  },
+  "regression_final": "pending",
+  "desktop_audit": {
+    "desktop_audit": "ok",
+    "pages": 5,
+    "themes": 3,
+    "languages": 3,
+    "dialogs": 3,
+    "form_state_preserved": true,
+    "member_row_reuse": true,
+    "callback_errors": []
+  },
+  "containers": {
+    "production_access": false,
+    "special_character_compose_roundtrip": "pass",
+    "migration_preserves_values": "pass",
+    "test_engine_without_iptables_uses_extra_hosts": true,
+    "fpm_http_database": "pass",
+    "admin_api_auth": "pass",
+    "custom_db_port": "pass",
+    "php_local_config_and_environment_priority": "pass",
+    "custom_home_network_names_ports": "pass",
+    "http_account_login": "pass",
+    "running_drift_blocks_migration": "pass",
+    "result": "pass"
+  },
+  "archive_export_reload": "pass",
+  "remote_ci": "not-run-no-push",
+  "vps_acceptance": "pending-user"
+}
