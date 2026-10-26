@@ -47,7 +47,7 @@ def main():
     (target / 'docs/client-artifacts.json').write_text(json.dumps(artifacts, indent=2) + '\n', 'utf-8')
     subprocess.run([sys.executable, '-B', str(target / 'scripts/make_build.py')], check=True)
     subprocess.run([sys.executable, '-B', str(target / 'scripts/check_deploy.py'), '--no-tests', '--strict-secrets'], check=True)
-    archive = ROOT / 'dist' / ('MCLAN-v' + version + '-candidate.tar.gz')
+    archive = ROOT / 'dist' / ('CraftLink-v' + version + '-candidate.tar.gz')
     if archive.exists():
         raise SystemExit('候选压缩包已存在，未覆盖')
     with tarfile.open(archive, 'w:gz') as stream:

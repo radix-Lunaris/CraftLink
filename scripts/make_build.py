@@ -114,7 +114,7 @@ README_TEMPLATE = """CraftLink v5.1.3 候选部署包（未完成 VPS 验收）
 客户端运行 CraftLink.exe；控制台排查使用 CraftLink-console.exe。
 源码运行先 pip install -r requirements.txt，再 python client/main.py。
 中继和两端客户端同步更新为 5.1.3；面板源码不变，复用原 5.1.1 面板镜像。
-本版未部署 VPS、源码未上传；远端 master/dev 只有空初始化提交，legacy 保留旧历史。
+本版未部署 VPS；脱敏源码按授权发布至 dev，master 空占位，legacy 保留旧历史。
 用户验收后另行授权发布源码和正式版本标签。
 
 共 {count} 个文件：

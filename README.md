@@ -1,8 +1,8 @@
-# MCLAN / CraftLink
+# CraftLink
 
 通用 TCP 端口联机工具，包含桌面客户端、房间管理、中继和管理面板。Minecraft 是使用场景之一，隧道建立不依赖游戏运行。
 
-当前开发候选 **v5.1.3**；在本地 `dev` 开发，尚未完成用户 VPS 验收，当前源码未上传远端。本版完成自有地址隐私配置，继承六项桌面优化；见 [隐私配置说明](docs/V5.1.3-PRIVACY.md)。
+当前开发候选 **v5.1.3**；源码在 `dev` 分支开发，尚未完成用户 VPS 验收。本版完成自有地址隐私配置，继承六项桌面优化；见 [隐私配置说明](docs/V5.1.3-PRIVACY.md)。完整网络回归仍有未通过用例，当前不是正式发行。
 
 ## 开发
 
@@ -35,11 +35,13 @@ bash /opt/mc-link/rebuild.sh all --prebuilt-panel
 
 [Git 中文操作说明](docs/GIT-WORKFLOW.md) · [v5.1.1 配置与迁移](docs/V5.1.1-CHANGES.md)
 
+[工作区结构与 VPS 上传说明](docs/DEPLOY-UPLOAD.md) · [GitHub 开发分支](https://github.com/radix-Lunaris/CraftLink/tree/dev)
+
 - `legacy`：旧远端提交和作者历史冻结归档。
 - `dev`：当前候选开发；只提交源码、资源、模板、测试和必要文档。
 - `master`：远端默认分支，目前为空占位；未来存放通过 VPS 验收的发行源码。
 - EXE、镜像及候选包保留在本地忽略目录，未来经明确批准后通过 Release 分发。
-- 远端原 `main` 已改名 `legacy`；远端 `master`、`dev` 仅含同一个无文件的初始化提交，未上传当前源码。本地 `dev` 继续保留开发进度。
-- 本地 pre-push 阻止源码推送；源码公开发布仍需另行授权。
+- 远端原 `main` 已改名 `legacy`；`master` 仍为空占位。用户已授权将脱敏源码首次发布至 `dev`，不更新稳定分支或正式标签。
+- pre-push 只允许一次授权记录指定的 dev 提交，检查历史敏感值及快进关系；其余推送拒绝。
 
 沿用原仓库 GPLv3 许可证；历史作者及旧发行记录完整保留。见 [LICENSE](LICENSE)。

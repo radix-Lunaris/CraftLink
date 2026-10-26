@@ -10,6 +10,6 @@ v5.1.1 已将数据库密码和管理 API Token 从 Compose 源码移出；两�
 
 `python -B scripts/check_secrets.py --staged` 检查暂存 blob；`--history` 检查所有可达历史 blob。扫描输出不包含匹配值，规则检查不能替代人工审阅与凭据轮换。
 
-现有公开旧历史只读扫描，不重写作者提交。发现疑似有效泄露时暂停公开发布，另行处理。当前候选仍未 push。
+现有公开旧历史只读扫描，不重写作者提交。发现疑似有效泄露时暂停公开发布，另行处理。2026-10-27 用户授权将脱敏源码推送到 CraftLink 的 dev；master、legacy 和正式标签不更新。授权不能替代暂存及历史敏感扫描。
 
 PHP `session_secret` 是保留的旧配置字段；当前登录使用 PHP 服务端 session，本轮不启用新的签名或修改登录机制。
