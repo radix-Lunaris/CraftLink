@@ -1,0 +1,38 @@
+{
+  "version": "5.1.2",
+  "status": "candidate-awaiting-vps",
+  "regression": {"tests": 66, "seconds": 152.430, "result": "pass", "log": "logs/v5.1.2-regression.log"},
+  "network_core_byte_identical_files": 29,
+  "existing_controller_ast_guard": "pass",
+  "desktop_audit": {"result": "pass", "pages": 5, "themes": 3, "languages": 3, "dialogs": 3, "callback_errors": []},
+  "ui_v512": {
+    "result": "pass",
+    "themes": ["light", "dark"],
+    "rounded_badges": true,
+    "table_alignment": true,
+    "dynamic_rows": "0 -> 2 -> 1 -> 0",
+    "empty_gap_native_pixels": 14,
+    "bold_status": true,
+    "light_text_contrast_checked": true,
+    "start_navigation": "accepted click only; all five pages; no lock",
+    "members": "centered owned window; not global topmost",
+    "callback_errors": [],
+    "script": "scripts/audit_ui_v512.py",
+    "screenshots": "docs/ui-preview-v512/"
+  },
+  "remote": {
+    "default_branch": "master",
+    "legacy": "48f138dcb8a650b5f68ea6e3dc6231205cbfc090",
+    "master_and_dev": "2dffb71d62e68600ad5f9297f31e23430b2da5c6",
+    "new_commit_files": 0,
+    "new_commit_parents": 0,
+    "current_source_uploaded": false,
+    "temporary_initialization_push_permission": "removed"
+  },
+  "credentials": {"externalized": true, "values_preserved": true, "rotated": false, "source_scan": "pass", "history_scan": "pass"},
+  "panel": {"source_changed": false, "reuse_verified_image_version": "5.1.1", "manifest": "docs/panel-image.json"},
+  "artifact_provenance": "docs/client-artifacts.json and external dist/MCLAN-v5.1.2-candidate.json",
+  "production_access": false,
+  "vps_acceptance": "pending-user",
+  "formal_release_tag": false
+}

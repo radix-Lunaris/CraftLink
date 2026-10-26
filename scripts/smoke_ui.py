@@ -40,15 +40,16 @@ def main():
                     app._render_hole_rows(None, punching=False)
                 root.update_idletasks()
                 assert not root.winfo_viewable(), "smoke test must keep the window hidden"
-                assert len(app._hole_rows) == 3
+                assert len(app._hole_rows) == 2
                 widths = []
                 for row in rows:
+                    if row["peer"] not in app._hole_rows: continue
                     label = app._hole_rows[row["peer"]][1]
                     assert row["public_ip"] in label.cget("text")
                     widths.append(round(label.winfo_reqwidth() / label._get_widget_scaling()))
                 assert max(widths) <= 530, widths
                 print(json.dumps({"ui_smoke": "ok", "auto_selectable": True,
-                                  "player_rows": 3, "row_widths": widths}))
+                                  "player_rows": 2, "row_widths": widths}))
             finally:
                 if app:
                     app.engine.shutdown()

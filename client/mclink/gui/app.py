@@ -44,10 +44,12 @@ class MCLinkApp(ClientController):
         # Native data grid, themed to match CTk; the shell and forms are CTk.
         style=ttk.Style(self.root)
         style.theme_use('clam')
+        scale=getattr(self.root,'_get_window_scaling',lambda:1.0)()
+        table_font=('Microsoft YaHei UI',-round(13*scale))
         style.configure('Craft.Treeview',background=CARD,fieldbackground=CARD,
-                        foreground=FG,borderwidth=0,rowheight=36,font=('Microsoft YaHei UI',12))
+                        foreground=FG,borderwidth=0,rowheight=round(36*scale),font=table_font)
         style.configure('Craft.Treeview.Heading',background=CARD_ALT,foreground=FG_DIM,
-                        relief='flat',font=('Microsoft YaHei UI',12,'bold'))
+                        relief='flat',font=(*table_font,'bold'),padding=(round(8*scale),round(6*scale)))
         style.map('Craft.Treeview',background=[('selected',ACCENT)],foreground=[('selected','white')])
 
     def _apply_appearance(self):
@@ -88,7 +90,7 @@ class MCLinkApp(ClientController):
         self.workspace.grid_rowconfigure(0,weight=1)
         self.pages={}
         for name in self.PAGE_TITLES:
-            page=(Frame(self.workspace) if name=='logs' else ctk.CTkScrollableFrame(
+            page=(Frame(self.workspace) if name in ('logs','rooms') else ctk.CTkScrollableFrame(
                 self.workspace,fg_color='transparent',corner_radius=0,scrollbar_button_color=BORDER))
             page.grid(row=0,column=0,sticky='nsew')
             self.pages[name]=page
@@ -120,7 +122,7 @@ class MCLinkApp(ClientController):
             self.nav_buttons[key]=button
         footer=Frame(self.sidebar)
         footer.pack(side='bottom',fill='x',padx=18,pady=22)
-        self.start_button=self._button(footer,'开始连接',self.on_start,primary=True)
+        self.start_button=self._button(footer,'开始连接',self._on_start_clicked,primary=True)
         self.start_button.pack(fill='x',pady=(0,8))
         self.stop_button=self._button(footer,'停止',self.on_stop)
         self.stop_button.pack(fill='x')
@@ -136,9 +138,13 @@ class MCLinkApp(ClientController):
         self.page_title.grid(row=0,column=0,sticky='w')
         self.server_status_label=Label(header,text=tr('● 未测试服务器'),text_color=WARN)
         self.server_status_label.grid(row=0,column=1,sticky='e')
-        self.header_room_label=Label(header,text='',text_color=FG_DIM)
+        self.header_room_label=Label(header,text='',text_color=FG_DIM,fg_color=CARD_ALT,
+                                     corner_radius=12,border_width=1,border_color=BORDER,height=32,
+                                     font=('Microsoft YaHei UI',13,'bold'))
         self.header_room_label.grid(row=1,column=0,sticky='w',pady=(6,0))
-        self.role_badge=Label(header,text=tr('未登录'),text_color=FG_MUTED)
+        self.role_badge=Label(header,text=tr('未登录'),text_color=FG_MUTED,fg_color=CARD_ALT,
+                              corner_radius=12,border_width=1,border_color=BORDER,height=32,
+                              font=('Microsoft YaHei UI',13,'bold'))
         self.role_badge.grid(row=1,column=1,sticky='e',pady=(6,0))
         self.aurora=self._aurora_canvas=None
 
@@ -297,12 +303,20 @@ class MCLinkApp(ClientController):
         self.rooms_button.pack(side='left',padx=(0,10))
         self._button(row,'加入选中房间',self.on_join_selected_room,primary=True,width=16).pack(side='left')
         cols=('room','owner','host','members','players','state')
-        self.rooms_tree=ttk.Treeview(card.body,columns=cols,show='headings',height=13,style='Craft.Treeview')
-        for key,title,width in zip(cols,['房间','房主','主机','房间内在线','已加入世界','状态'],[130,110,110,110,110,140]):
-            self.rooms_tree.heading(key,text=tr(title)); self.rooms_tree.column(key,width=width,minwidth=65)
-        self.rooms_tree.pack(fill='both',expand=True)
-        scroll=ctk.CTkScrollbar(card.body,orientation='horizontal',command=self.rooms_tree.xview)
-        scroll.pack(fill='x'); self.rooms_tree.configure(xscrollcommand=scroll.set)
+        table=Frame(card.body,height=0); table.pack(fill='both',expand=True)
+        table.grid_columnconfigure(0,weight=1); table.grid_rowconfigure(0,weight=1)
+        self.rooms_tree=ttk.Treeview(table,columns=cols,show='headings',height=10,style='Craft.Treeview')
+        scale=getattr(self.root,'_get_window_scaling',lambda:1.0)()
+        for key,title,width in zip(cols,['房间','房主','主机','房间内在线','已加入世界','状态'],[170,120,120,110,110,160]):
+            anchor='center' if key in ('members','players') else 'w'
+            self.rooms_tree.heading(key,text=tr(title),anchor=anchor)
+            self.rooms_tree.column(key,width=round(width*scale),minwidth=round(85*scale),anchor=anchor)
+        self.rooms_tree.grid(row=0,column=0,sticky='nsew')
+        vertical=ctk.CTkScrollbar(table,orientation='vertical',command=self.rooms_tree.yview)
+        vertical.grid(row=0,column=1,sticky='ns')
+        scroll=ctk.CTkScrollbar(table,orientation='horizontal',command=self.rooms_tree.xview)
+        scroll.grid(row=1,column=0,sticky='ew')
+        self.rooms_tree.configure(xscrollcommand=scroll.set,yscrollcommand=vertical.set)
         self.rooms_tree.bind('<<TreeviewSelect>>',self.on_room_row_selected)
         self.rooms_tree.bind('<Double-1>',lambda _event:self.on_join_selected_room())
         for tag,color in [('busy',FG),('empty',FG_MUTED),('mine',ACCENT),('mine_busy',ACCENT)]:
@@ -320,36 +334,77 @@ class MCLinkApp(ClientController):
                 ('room_members','房间内在线'),('players','已加入世界'),('local_links','本地连接'),
                 ('ping','中转延迟'),('peer_ping','对端延迟'),('speed','实时速度'),('traffic','累计流量')]:
             row=Frame(card.body); row.pack(fill='x',pady=5)
-            Label(row,text=tr(title),width=120,fg=FG_DIM).pack(side='left',anchor='n')
+            Label(row,text=tr(title),width=120,fg=self._status_ink(FG_DIM),
+                  font=('Microsoft YaHei UI',13,'bold')).pack(side='left',anchor='n')
             var=tk.StringVar(value='—'); self.status_vars[key]=var
-            label=Label(row,textvariable=var,wraplength=600,justify='left')
+            label=Label(row,textvariable=var,wraplength=600,justify='left',
+                        font=('Microsoft YaHei UI',16 if key in ('state','path','punch') else 13,'bold'))
             label.pack(side='left',fill='x',expand=True); self.status_labels[key]=label
             if key=='punch':
-                self.hole_rows_frame=Frame(card.body)
-                self.hole_rows_frame.pack(fill='x',padx=(12,0),pady=(0,10))
+                self._punch_status_row=row
+                self.hole_rows_frame=Frame(card.body,height=0)
         self.ping_label=self.status_labels['ping']; self.peer_ping_label=self.status_labels['peer_ping']
         self.speed_label=self.status_labels['speed']
 
+    def _on_start_clicked(self):
+        was_running=self.running
+        self.on_start()
+        if not was_running and self.running:
+            self.show_page('network')
+
+    def _status_ink(self,color):
+        color={'ok':OK,'warn':WARN,'muted':FG_MUTED,'dim':FG_MUTED,'bad':BAD,'error':BAD,'info':ACCENT}.get(color,color)
+        if not isinstance(color,str) or not color.startswith('#') or len(color)!=7:
+            color=FG
+        if theme_mod.resolved()!='light' or not isinstance(color,str) or len(color)!=7 or not color.startswith('#'):
+            return color
+        def luminance(rgb):
+            linear=[v/12.92 if v<=0.04045 else ((v+0.055)/1.055)**2.4 for v in rgb]
+            return sum(a*b for a,b in zip(linear,(.2126,.7152,.0722)))
+        rgb=[int(color[i:i+2],16)/255 for i in (1,3,5)]
+        background=luminance([int(CARD[i:i+2],16)/255 for i in (1,3,5)])
+        for _ in range(24):
+            ink=luminance(rgb)
+            if (max(background,ink)+.05)/(min(background,ink)+.05)>=4.5:break
+            rgb=[v*.9 for v in rgb]
+        return '#'+''.join(f'{round(v*255):02x}' for v in rgb)
+
+    def _set_status_color(self,key,color):
+        widget=self.status_labels.get(key)
+        if widget is not None:
+            widget.configure(fg=self._status_ink(color))
+
     def _render_hole_rows(self,links,punching=False):
         snapshot=self.engine.snapshot() or {}
+        state=self.engine.room_state()
+        started=set(getattr(state,'started_ids',None) or [])
+        conns=getattr(state,'member_conns',{}) or {}
         links=snapshot.get('connection_rows',links) or []
-        links=[item for item in links if item.get('peer')]
+        links=[item for item in links if item.get('peer')
+               and item.get('switch_phase') not in ('ended','reset','closed')
+               and (item.get('active_path') in ('relay','direct','mixed','reconnecting')
+                    or item.get('ready') or item['peer'] in started
+                    or conns.get(item['peer']) in ('waiting','pairing','connected'))]
         wanted={item['peer'] for item in links}
         for peer in list(self._hole_rows):
             if peer not in wanted:self._hole_rows.pop(peer)[0].destroy()
-        state=self.engine.room_state()
+        if not links:
+            self.hole_rows_frame.pack_forget()
+            return
+        self.hole_rows_frame.pack(fill='x',padx=(12,0),pady=(2,4),after=self._punch_status_row)
         names=getattr(state,'member_names',{}) if state else {}
         for item in links:
             peer=item['peer']
             if 'display_text' in item:text,hint=item['display_text'],item.get('display_hint','muted')
             else:text,hint=hole_row_text(item,fallback_name=names.get(str(peer),str(peer)))
-            color={'ok':OK,'warn':WARN,'muted':FG_MUTED}.get(hint,FG)
+            color=self._status_ink({'ok':OK,'warn':WARN,'muted':FG_MUTED}.get(hint,FG))
             if peer not in self._hole_rows:
-                row=Frame(self.hole_rows_frame)
-                label=Label(row,text=text,fg=color,wraplength=520,justify='left')
+                row=Frame(self.hole_rows_frame,height=0)
+                label=Label(row,text=text,fg=color,wraplength=520,justify='left',
+                            font=('Microsoft YaHei UI',14,'bold'))
                 label.pack(side='left'); self._hole_rows[peer]=(row,label)
             row,label=self._hole_rows[peer]; label.configure(text=text,fg=color)
-            row.pack(fill='x',pady=3)
+            row.pack(fill='x',pady=2)
 
     def _build_logs_page(self,parent):
         row=Frame(parent); row.pack(fill='x',pady=(0,12))
@@ -369,6 +424,7 @@ class MCLinkApp(ClientController):
             existing.deiconify(); existing.lift(); existing.focus_set()
             return
         win=Dialog(self.root); win.title(tr('房间成员')); win.geometry('1200x650'); win.minsize(900,500)
+        win.transient(self.root)
         self.member_window=win
         self.member_hint=Label(win,text='',fg=FG_DIM); self.member_hint.pack(fill='x',padx=22,pady=18)
         self.member_table=ctk.CTkScrollableFrame(win,fg_color=CARD,corner_radius=12)
@@ -380,6 +436,24 @@ class MCLinkApp(ClientController):
         self.member_rows={}; self.member_names_by_key={}; self._member_list_filling=False
         win.protocol('WM_DELETE_WINDOW',self._close_member_window)
         self._refresh_member_list(force=True)
+        win.update_idletasks()
+        x=max(0,min(self.root.winfo_rootx()+(self.root.winfo_width()-win.winfo_width())//2,
+                    win.winfo_screenwidth()-win.winfo_width()))
+        y=max(0,min(self.root.winfo_rooty()+(self.root.winfo_height()-win.winfo_height())//2,
+                    win.winfo_screenheight()-win.winfo_height()))
+        win.geometry(f'+{x}+{y}')
+        win.lift(); win.focus_set()
+        win._present_after=win.after(250,lambda:self._present_member_window(win))
+
+    def _close_member_window(self):
+        win=getattr(self,'member_window',None)
+        if win is not None:
+            with contextlib.suppress(Exception):win.after_cancel(getattr(win,'_present_after',''))
+        super()._close_member_window()
+
+    def _present_member_window(self,win):
+        if win.winfo_exists():
+            win.lift(); win.focus_set()
 
     def _render_member_rows(self,rows):
         super()._render_member_rows(rows)
