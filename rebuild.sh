@@ -1004,8 +1004,26 @@ fi
 #
 # 这一步失败不影响重建本身，所以全是 best-effort，出错不报。
 install_shortcuts () {
-    # Existing user shortcuts remain unchanged. Commands below work from any cwd.
-    echo "重建入口：bash \"$MCLINK_HOME/rebuild.sh\" [panel|relay|all]"
+    local wrapper quoted_root extra rc
+    printf -v quoted_root '%q' "$MCLINK_HOME/rebuild.sh"
+    for wrapper in mcr mcp; do
+        extra=""
+        [ "$wrapper" = "mcp" ] && extra=" panel"
+        if [ ! -x "/usr/local/bin/$wrapper" ]; then
+            if printf '#!/bin/bash\nexec bash %s%s "$@"\n' "$quoted_root" "$extra" \
+                    > "/usr/local/bin/$wrapper" 2>/dev/null; then
+                chmod +x "/usr/local/bin/$wrapper" 2>/dev/null || true
+                echo "  [+] 已安装短命令：$wrapper"
+            fi
+        fi
+    done
+    rc=/root/.bashrc
+    if [ -f "$rc" ] && ! grep -q 'mc-link rebuild shortcuts' "$rc" 2>/dev/null; then
+        if printf '\n# mc-link rebuild shortcuts\nalias mcr=%q\nalias mcp=%q\n' \
+                "bash $quoted_root" "bash $quoted_root panel" >> "$rc" 2>/dev/null; then
+            echo "  [+] 已写入 /root/.bashrc（重开终端后生效）"
+        fi
+    fi
 }
 
 install_shortcuts
