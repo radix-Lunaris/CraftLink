@@ -5,7 +5,7 @@
 *.env.*
 !.env.example
 !*.env.example
-panel/config.php
+**/config.php
 **/config.local.php
 mclink_config*.json
 credentials*.json

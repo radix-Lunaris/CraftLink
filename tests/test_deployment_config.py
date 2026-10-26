@@ -124,7 +124,7 @@ class DeploymentTests(unittest.TestCase):
     def test_private_files_excluded_from_package_independently_of_git(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for name in ('.env', '.env.bak', '.env.example', 'panel/config.php', 'panel/config.local.php', 'panel/config.sample.php', 'dist/secret.txt', '.private/password.txt', 'credentials.dat', 'client/mclink_config.json'):
+            for name in ('.env', '.env.bak', '.env.example', 'panel/config.php', 'panel/config.local.php', 'panel/config.sample.php', 'dist/secret.txt', '.private/password.txt', 'credentials.dat', 'client/mclink_config.json', 'panel/lib/config.php'):
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text('fixture', 'utf-8')

@@ -82,9 +82,9 @@ def main():
                         or basename.startswith('credentials.dat') or basename == 'config.local.php'
                         or basename in ('.device_id', 'settings.json')
                         or basename.startswith('mclink_config') and basename.endswith('.json')
-                        or name == 'panel/config.php'
+                        or basename == 'config.php'
                         or Path(name).suffix in ('.exe', '.pem', '.pfx', '.key'))
-        if args.staged and private_path:
+        if (args.staged or args.history) and private_path:
             rules.append('private-or-build-file-in-index')
         for rule in rules:
             issues.append((name, rule))

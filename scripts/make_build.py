@@ -138,7 +138,7 @@ def package_files(root=ROOT):
         # 改好了。`scripts/rotate_secrets.py` 更是轮换凭据的唯一入口。
         for name in sorted(filenames):
             rel_candidate = os.path.relpath(os.path.join(dirpath, name), root).replace(os.sep, "/")
-            private = (name.startswith(".env") and name != ".env.example" or name.endswith((".env", ".bak", ".pem", ".key", ".pfx", ".p12", ".migration-tmp")) or name == "config.local.php" or rel_candidate == "panel/config.php")
+            private = (name.startswith(".env") and name != ".env.example" or name.endswith((".env", ".bak", ".pem", ".key", ".pfx", ".p12", ".migration-tmp")) or name == "config.local.php" or name == "config.php")
             private = private or (name.startswith("mclink_config") and name.endswith(".json")) or name.startswith("credentials.dat")
             if private or name in EXCLUDED_FILES:
                 continue
