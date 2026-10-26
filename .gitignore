@@ -47,3 +47,7 @@ Thumbs.db
 .vscode/
 
 *.migration-tmp
+
+# Actual encrypted login cache filename
+credentials.dat
+credentials.dat.*

@@ -12,7 +12,12 @@
     "seconds": 151.657,
     "result": "pass"
   },
-  "regression_final": "pending",
+  "regression_final": {
+    "tests": 66,
+    "seconds": 160.447,
+    "result": "pass",
+    "log": "logs/v5.1.1-regression-final.log"
+  },
   "desktop_audit": {
     "desktop_audit": "ok",
     "pages": 5,
@@ -39,5 +44,59 @@
   },
   "archive_export_reload": "pass",
   "remote_ci": "not-run-no-push",
-  "vps_acceptance": "pending-user"
+  "vps_acceptance": "pending-user",
+  "final_configuration_package_guards": {
+    "tests": 12,
+    "result": "pass",
+    "log": "logs/config-guards-final.log"
+  },
+  "host_gone_e2e": {
+    "scenarios": 2,
+    "result": "pass"
+  },
+  "compose_literal_roundtrip": {
+    "cases": 8,
+    "result": "pass",
+    "includes_trailing_backslash": true
+  },
+  "client_artifacts": {
+    "source_commit": "7f38bfc2e9702e304771485745a22328aad33f3c",
+    "version": "5.1.1",
+    "revision": "network-r2",
+    "python": "3.11.9",
+    "pyinstaller": "6.22.2",
+    "pillow": "12.3.0",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "artifacts": [
+      {
+        "file": "dist/artifacts/CraftLink.exe",
+        "bytes": 20772881,
+        "sha256": "a1f255e9767c7661033ecb6718d26447115762cf2fbe2fe3133c6f79c4735940",
+        "self_test": {
+          "ui": "customtkinter",
+          "ui_smoke": "ok",
+          "version": "5.1.1",
+          "revision": "network-r2",
+          "protocol": "auto_stream_v1",
+          "self_test": "ok"
+        }
+      },
+      {
+        "file": "dist/artifacts/CraftLink-console.exe",
+        "bytes": 20776852,
+        "sha256": "5b6ccd772b2951d5624bc3a94c9c4527c42ba0eb38d6a6312ba0be2321794794",
+        "self_test": {
+          "ui": "customtkinter",
+          "ui_smoke": "ok",
+          "version": "5.1.1",
+          "revision": "network-r2",
+          "protocol": "auto_stream_v1",
+          "self_test": "ok"
+        }
+      }
+    ]
+  },
+  "source_history_secret_scan": "pass",
+  "private_config_acl": "current user, SYSTEM, Administrators; inherited child access",
+  "first_source_commit": "7f38bfc2e9702e304771485745a22328aad33f3c"
 }

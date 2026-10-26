@@ -159,10 +159,12 @@ def validate_models(panel, relay, literal):
             a, b = a or '3306', b or '3306'
         if not a or a != b:
             raise ConfigError(f'{key}：面板与中继配置缺失或冲突')
+        if key in literal and literal[key] != a:
+            raise ConfigError(f'{key}：共享配置与实际解析结果冲突，检查环境变量及引号')
         if key in SECRETS:
             if 'CHANGE_ME' in a.upper() or a.startswith('${'):
                 raise ConfigError(f'{key}：仍为占位符')
-            if key not in literal or literal[key] != a:
+            if key not in literal:
                 raise ConfigError(f'{key}：配置文件与实际解析结果冲突，检查环境变量及引号')
 
 

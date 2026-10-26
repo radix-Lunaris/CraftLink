@@ -57,7 +57,7 @@ EXCLUDED_DIRS = {
 }
 
 EXCLUDED_FILES = {
-    ".env",
+    ".env", "credentials.dat", ".device_id", "settings.json",
     ".DS_Store",
     "Thumbs.db",
     # ------------------------------------------------------------------
@@ -139,6 +139,7 @@ def package_files(root=ROOT):
         for name in sorted(filenames):
             rel_candidate = os.path.relpath(os.path.join(dirpath, name), root).replace(os.sep, "/")
             private = (name.startswith(".env") and name != ".env.example" or name.endswith((".env", ".bak", ".pem", ".key", ".pfx", ".p12", ".migration-tmp")) or name == "config.local.php" or rel_candidate == "panel/config.php")
+            private = private or (name.startswith("mclink_config") and name.endswith(".json")) or name.startswith("credentials.dat")
             if private or name in EXCLUDED_FILES:
                 continue
 

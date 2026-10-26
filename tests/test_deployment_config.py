@@ -53,6 +53,8 @@ class DeploymentTests(unittest.TestCase):
         panel, relay = pm['services']['mc-panel'], rm['services']['mc-relay']
         literal = {key: relay['environment'][key] for key in config.SECRETS}
         config.validate_models(panel, relay, literal)
+        with self.assertRaises(config.ConfigError):
+            config.validate_models(panel, relay, dict(literal, MCLINK_DB_HOST='unintended-environment-override'))
         for key in config.SECRETS:
             changed = copy.deepcopy(panel)
             changed['environment'][key] += '-wrong'
@@ -122,7 +124,7 @@ class DeploymentTests(unittest.TestCase):
     def test_private_files_excluded_from_package_independently_of_git(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for name in ('.env', '.env.bak', '.env.example', 'panel/config.php', 'panel/config.local.php', 'panel/config.sample.php', 'dist/secret.txt', '.private/password.txt'):
+            for name in ('.env', '.env.bak', '.env.example', 'panel/config.php', 'panel/config.local.php', 'panel/config.sample.php', 'dist/secret.txt', '.private/password.txt', 'credentials.dat', 'client/mclink_config.json'):
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text('fixture', 'utf-8')
