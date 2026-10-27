@@ -4,9 +4,26 @@ import customtkinter as ctk
 from . import presentation as p
 
 
+def stronger_font(font=('Microsoft YaHei UI', 13)):
+    """Raise regular UI text one weight step, preserving sizes and bold text."""
+    if isinstance(font, ctk.CTkFont):
+        if font.cget('weight') == 'bold':
+            return font
+        result = font.copy()
+        result.configure(weight='bold')
+        return result
+    if isinstance(font, (tuple, list)) and len(font) >= 2:
+        if 'bold' in font[2:]:
+            return font
+        return (*font[:2], 'bold', *(part for part in font[2:] if part != 'normal'))
+    return font
+
+
 class Colors:
     """Translate the controller's existing text/surface colour updates."""
     def configure(self, require_redraw=False, **kwargs):
+        if 'font' in kwargs:
+            kwargs['font'] = stronger_font(kwargs['font'])
         if 'fg' in kwargs:
             kwargs['text_color'] = kwargs.pop('fg')
         if 'bg' in kwargs:
@@ -29,6 +46,7 @@ class Label(Colors, ctk.CTkLabel):
             if old in kwargs:
                 kwargs[new] = kwargs.pop(old)
         kwargs.setdefault('font', ('Microsoft YaHei UI', 13))
+        kwargs['font'] = stronger_font(kwargs['font'])
         kwargs.setdefault('anchor', 'w')
         kwargs.setdefault('height', 24)
         super().__init__(master, **kwargs)
@@ -46,6 +64,7 @@ class Button(Colors, ctk.CTkButton):
         kwargs.setdefault('hover_color', p.ACCENT_DARK if primary else p.BORDER)
         kwargs.setdefault('text_color', 'white' if primary or danger else p.FG)
         kwargs.setdefault('font', ('Microsoft YaHei UI', 13, 'bold' if primary else 'normal'))
+        kwargs['font'] = stronger_font(kwargs['font'])
         kwargs.setdefault('height', 38)
         kwargs.setdefault('corner_radius', 9)
         super().__init__(master, text=text, command=command, width=max(64, width), **kwargs)
@@ -56,6 +75,7 @@ class Entry(ctk.CTkEntry):
         kwargs.pop('style', None)
         kwargs.setdefault('height', 38)
         kwargs.setdefault('font', ('Microsoft YaHei UI', 13))
+        kwargs['font'] = stronger_font(kwargs['font'])
         kwargs.setdefault('corner_radius', 8)
         super().__init__(master, **kwargs)
 
@@ -141,5 +161,6 @@ class CheckBox(Colors, ctk.CTkCheckBox):
         text=kwargs.get('text','')
         if len(text)>30:text=text.replace('（','\n（',1)
         kwargs['text']=text
+        kwargs['font']=stronger_font(kwargs.get('font',('Microsoft YaHei UI',13)))
         super().__init__(master,**kwargs)
 

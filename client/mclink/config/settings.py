@@ -16,7 +16,7 @@ from ..core import protocol as proto
 
 APP_NAME = "CraftLink"
 APP_NAME_ZH = "方块联机"
-APP_VERSION = "5.1.3"
+APP_VERSION = "5.1.4"
 APP_REVISION = "network-r2"
 #: 版本不一致时让用户去下载新版的地址（HTTPS，443 端口）。
 #:

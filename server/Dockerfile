@@ -36,7 +36,7 @@ FROM python:3.12-slim
 
 LABEL org.opencontainers.image.title="mc-link-relay"
 LABEL org.opencontainers.image.description="MC-Link TCP relay for Minecraft LAN session sharing"
-LABEL org.opencontainers.image.version="5.1.3"
+LABEL org.opencontainers.image.version="5.1.4"
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

@@ -45,11 +45,11 @@ class MCLinkApp(ClientController):
         style=ttk.Style(self.root)
         style.theme_use('clam')
         scale=getattr(self.root,'_get_window_scaling',lambda:1.0)()
-        table_font=('Microsoft YaHei UI',-round(13*scale))
+        table_font=('Microsoft YaHei UI',-round(13*scale),'bold')
         style.configure('Craft.Treeview',background=CARD,fieldbackground=CARD,
                         foreground=FG,borderwidth=0,rowheight=round(36*scale),font=table_font)
         style.configure('Craft.Treeview.Heading',background=CARD_ALT,foreground=FG_DIM,
-                        relief='flat',font=(*table_font,'bold'),padding=(round(8*scale),round(6*scale)))
+                        relief='flat',font=table_font,padding=(round(8*scale),round(6*scale)))
         style.map('Craft.Treeview',background=[('selected',ACCENT)],foreground=[('selected','white')])
 
     def _apply_appearance(self):
@@ -280,7 +280,8 @@ class MCLinkApp(ClientController):
             row=Frame(card.body); row.pack(fill='x',pady=6)
             Label(row,text=tr(label),width=100).pack(side='left')
             ctk.CTkOptionMenu(row,variable=var,values=values,command=callback,
-                             width=220,height=36,font=('Microsoft YaHei UI',13)).pack(side='left')
+                             width=220,height=36,font=('Microsoft YaHei UI',13,'bold'),
+                             dropdown_font=('Microsoft YaHei UI',13,'bold')).pack(side='left')
 
     def _build_config_row(self,parent,label,hint,variable,commit,key=''):
         Label(parent,text=tr(label),fg=FG_DIM).pack(fill='x',pady=(10,5))
@@ -412,7 +413,7 @@ class MCLinkApp(ClientController):
                 ('清空日志',self.on_clear_log),('打开配置目录',self.on_open_config_dir)]:
             self._button(row,title,callback).pack(side='left',padx=(0,10))
         self.log_text=ctk.CTkTextbox(parent,fg_color=LOG_BG,text_color=LOG_FG,
-                                   font=('Consolas',12),wrap='word',corner_radius=12)
+                                   font=('Consolas',12,'bold'),wrap='word',corner_radius=12)
         self.log_text.pack(fill='both',expand=True)
         for tag,color in [('normal',LOG_FG),('info',FG),('ok',OK),('warn',WARN),('error',BAD),('dim',FG_MUTED)]:
             self.log_text.tag_config(tag,foreground=color)

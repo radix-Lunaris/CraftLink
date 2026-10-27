@@ -1,6 +1,6 @@
 # 工作区与 VPS 上传说明
 
-项目名称为 CraftLink，远端为 https://github.com/radix-Lunaris/CraftLink ，当前开发在 dev。现有版本仍是 v5.1.3 隐私候选，网络完整回归尚有未通过场景，未标成正式发行。
+项目名称为 CraftLink，远端为 https://github.com/radix-Lunaris/CraftLink ，当前开发在 dev。本地最新为 v5.1.4 字体候选，尚未推送，未标成正式发行。已发布的 v5.1.3 双平台 CI 已通过；新版验证见 V5.1.4-VALIDATION.json。
 
 ## 本地工作区
 
@@ -24,7 +24,7 @@
 
 ## 上传哪些内容
 
-使用本地 `CraftLink/dist/v5.1.3Full/` 完整候选目录或同目录旁的候选压缩包，保持相对路径上传到现有 VPS 部署根目录（例如 `/opt/mc-link`）。该部署路径不必改名。
+使用本地 `CraftLink/dist/v5.1.4Full/` 完整候选目录或同目录旁的候选压缩包，保持相对路径上传到现有 VPS 部署根目录（例如 `/opt/mc-link`）。该部署路径不必改名。
 
 最稳妥的做法是上传候选目录全部内容，只跳过根目录的 `CraftLink.exe`、`CraftLink-console.exe`；EXE 在玩家电脑运行。保留 `server/`、`panel/`、`scripts/`、`docs/`、`images/`、其余源码及根目录脚本、requirements 和 BUILD.txt，便于完整校验。使用 `--prebuilt-panel` 时，`images/` 的离线镜像及 `docs/panel-image.json`、`docs/panel-image.sha256` 必须配套上传。
 
@@ -50,6 +50,6 @@ python3 scripts/deploy_config.py
 bash rebuild.sh all --prebuilt-panel
 ```
 
-预检失败不要继续重建。重建中继会断开正在使用的连接，需安排合适时间。中继与双方客户端版本须一致为 5.1.3。面板代码未改，随包沿用已验证的 5.1.1 面板镜像，文件名和哈希保持真实版本。
+预检失败不要继续重建。重建中继会断开正在使用的连接，需安排合适时间。中继与双方客户端版本须一致为 5.1.4。面板代码未改，随包沿用已验证的 5.1.1 面板镜像，文件名和哈希保持真实版本。
 
-若这次只更新客户端显示且 VPS 已是同版本、服务文件未变化，不必重复重建。正式使用前仍需 VPS 与真实公网验收；当前 dev 中列出的回归问题不会因完成脱敏而自动消失。
+若 VPS 已是同版本、服务文件未变化，不必重复重建。首次从 5.1.3 更新到 5.1.4 时，严格版本校验要求同步中继版本；中继只有版本元数据变化，网络逻辑没有变化。正式使用前仍需 VPS 与真实公网验收。
