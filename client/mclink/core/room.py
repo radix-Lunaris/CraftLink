@@ -717,6 +717,8 @@ class RoomSession:
             f"{handshake_token} {proto.room_token(room)}{capacity}"
             f" caps=auto_stream_v1 ver={_cfg.APP_VERSION}"
         )
+        if getattr(self, 'recovering', False):
+            line += ' recover=1'
 
         self.writer.write((line + "\n").encode())
         await self.writer.drain()
@@ -1997,6 +1999,8 @@ class RoomSession:
             ("NO_HOST", "host_left"),
         ):
             if upper.startswith(_code):
+                if not self.still_current():
+                    return
                 reason = text.split(" ", 1)[1].strip() if " " in text else ""
 
                 if reason and reason in ("-",):
@@ -2226,18 +2230,18 @@ class RoomSession:
                 if self.writer is None:
                     continue
 
-                async with self._send_lock:
-                    self.writer.write(
-                        f"PING {time.monotonic():.3f}\n".encode()
-                    )
-                    await self.writer.drain()
+                async def send_ping():
+                    async with self._send_lock:
+                        self.writer.write(f"PING {time.monotonic():.3f}\n".encode())
+                        await self.writer.drain()
+                await asyncio.wait_for(send_ping(), PING_INTERVAL)
 
             except asyncio.CancelledError:
                 raise
 
             except Exception:
-                # The read loop notices and reports.
-                continue
+                await self._report_connection_dead()
+                return
 
     async def _report_connection_dead(self):
         """
@@ -2255,6 +2259,8 @@ class RoomSession:
         The reason is the phrase this file already uses for a lost connection,
         so the user-facing popup/log stays fully translated.
         """
+        if not self.running:
+            return
         self.last_error = self.last_error or "与服务器的连接已断开"
         self.running = False
 

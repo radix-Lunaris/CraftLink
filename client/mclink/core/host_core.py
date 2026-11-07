@@ -35,10 +35,16 @@ from .common import (
     BUFFER_SIZE,
     RateMeter,
     close_writer,
+    safe_close_all,
+    abort_writer,
+    wait_transport_closed,
     enable_tcp_nodelay,
     now,
 )
 from . import protocol as proto
+
+CONTROL_PING_INTERVAL = 3.0
+CONTROL_PONG_TIMEOUT = 9.0
 
 
 class _TunnelRetry(Exception):
@@ -171,6 +177,13 @@ class HostCore:
 
         self.control_online = False
         self.control_connected_at = None
+        self._last_pong = 0.0
+        self._pending_pings = {}
+        self._control_buffer = ''
+        self._control_epoch = 0
+        self._tunnel_writers = {}
+        self._tunnel_workers = {}
+        self._pool_started = False
 
         # V2: room deletion over the control channel.
         self.delete_result = None
@@ -447,6 +460,10 @@ class HostCore:
                 self.control_writer = writer
                 self.control_online = True
                 self.control_connected_at = asyncio.get_event_loop().time()
+                self._last_pong = self.control_connected_at
+                self._pending_pings.clear()
+                self._control_buffer = ''
+                self._control_epoch += 1
 
                 self.log(f"[CONTROL] control connection established room={self.room}")
                 self.emit("control_online")
@@ -471,7 +488,13 @@ class HostCore:
                 await self.connect_control()
 
                 while self.running:
-                    data = await self.control_reader.read(4096)
+                    remaining = CONTROL_PONG_TIMEOUT - (asyncio.get_running_loop().time() - self._last_pong)
+                    if remaining <= 0:
+                        raise ConnectionError('Host 控制通道 PONG 超时')
+                    try:
+                        data = await asyncio.wait_for(self.control_reader.read(4096), remaining)
+                    except asyncio.TimeoutError:
+                        raise ConnectionError('Host 控制通道 PONG 超时') from None
 
                     if not data:
                         raise ConnectionError("中转控制连接被关闭")
@@ -483,6 +506,12 @@ class HostCore:
 
             except Exception as e:
                 self.control_online = False
+                self.tunnel_ready.clear()
+                # Invalidate only writers owned by this control incarnation.
+                # Late connect completions also compare the epoch below.
+                self._control_epoch += 1
+                for tunnel_writer in tuple(self._tunnel_writers.values()):
+                    abort_writer(tunnel_writer)
                 self.log(f"[CONTROL] control connection closed: {e}")
                 self.emit("control_offline", reason=str(e))
 
@@ -509,7 +538,13 @@ class HostCore:
         except Exception:
             return
 
-        for raw_line in text.splitlines():
+        self._control_buffer += text
+        lines = self._control_buffer.split('\n')
+        self._control_buffer = lines.pop()
+        if len(self._control_buffer) > 65536:
+            abort_writer(self.control_writer)
+            self._control_buffer = ''
+        for raw_line in lines:
 
             line = raw_line.strip()
 
@@ -664,26 +699,31 @@ class HostCore:
         while self.running:
 
             try:
-                await asyncio.sleep(3)
+                await asyncio.sleep(CONTROL_PING_INTERVAL)
 
                 if not self.control_online or self.control_writer is None:
                     continue
 
                 stamp = f"{asyncio.get_event_loop().time():.3f}"
+                self._pending_pings[stamp] = asyncio.get_running_loop().time()
+                while len(self._pending_pings) > 8:
+                    self._pending_pings.pop(next(iter(self._pending_pings)))
                 self.control_writer.write(f"PING {stamp}\n".encode())
-                await self.control_writer.drain()
+                await asyncio.wait_for(self.control_writer.drain(), 1.0)
 
             except asyncio.CancelledError:
                 raise
 
             except Exception:
-                # The control loop will notice and reconnect.
+                abort_writer(self.control_writer)
                 continue
 
     def on_pong(self, line):
         parts = line.split()
 
         if len(parts) < 2:
+            return
+        if self._pending_pings.pop(parts[1], None) is None:
             return
 
         try:
@@ -697,6 +737,7 @@ class HostCore:
             return
 
         self.relay_ping_ms = round(rtt_ms, 1)
+        self._last_pong = asyncio.get_running_loop().time()
         self.emit("ping", ping_ms=self.relay_ping_ms)
 
     def on_info(self, line):
@@ -727,6 +768,17 @@ class HostCore:
                 await asyncio.sleep(1.0)
 
                 self.sample_rates()
+                if self._pool_started:
+                    for number, task in tuple(self._tunnel_workers.items()):
+                        if task.done():
+                            with contextlib.suppress(asyncio.CancelledError, Exception):
+                                task.result()
+                            replacement = asyncio.create_task(self.tunnel_loop(number))
+                            self._tunnel_workers[number] = replacement
+                            self.tunnel_tasks = list(self._tunnel_workers.values())
+                            self._tasks = [t for t in self._tasks if not t.done()]
+                            self._tasks.append(replacement)
+                            self.log(f'[TUNNEL {number:02d}] worker recovered')
 
                 self.emit(
                     "rates",
@@ -746,6 +798,10 @@ class HostCore:
 
     async def tunnel_loop(self, tunnel_number):
         while self.running:
+            if not self.control_online:
+                await asyncio.sleep(.1)
+                continue
+            epoch = self._control_epoch
 
             reader = None
             writer = None
@@ -773,6 +829,9 @@ class HostCore:
                 )
 
                 enable_tcp_nodelay(writer)
+                if not self.control_online or epoch != self._control_epoch:
+                    raise _TunnelRetry('旧代控制连接已失效')
+                self._tunnel_writers[tunnel_number] = writer
 
                 # ---- FROZEN handshake -----------------------
                 from ..config import settings as _cfg
@@ -834,6 +893,8 @@ class HostCore:
 
                 if text != proto.LINE_WAIT:
                     raise ConnectionError(f"隧道应答异常: {text}")
+                if not self.control_online or epoch != self._control_epoch:
+                    raise _TunnelRetry('旧代隧道已失效')
 
                 self.tunnel_ready[tunnel_number] = True
                 self.log(f"[TUNNEL {tunnel_number:02d}] idle, waiting (READY / WAITING)")
@@ -989,8 +1050,9 @@ class HostCore:
 
                 # Deterministic cleanup: the relay socket first, then the
                 # local Minecraft socket. Both are idempotent.
-                await close_writer(writer)
-                await close_writer(mc_writer)
+                if self._tunnel_writers.get(tunnel_number) is writer:
+                    self._tunnel_writers.pop(tunnel_number, None)
+                await safe_close_all(writer, mc_writer)
 
                 if session_id:
                     async with self.lock:
@@ -1211,7 +1273,7 @@ class HostCore:
             f"session={session_id}"
         )
 
-        stats = {"to_relay": 0, "to_mc": 0}
+        stats = {"to_relay": 0, "to_mc": 0, "failed": False}
 
         # ============================================================================
         #  实时速度是【所有会话的合计】，不是"最后一个写进去的数字"
@@ -1242,6 +1304,7 @@ class HostCore:
                 raise
 
             except Exception:
+                stats['failed'] = True
                 return
 
         async def relay_to_mc():
@@ -1262,16 +1325,21 @@ class HostCore:
                 raise
 
             except Exception:
+                stats['failed'] = True
                 return
 
         task1 = asyncio.create_task(mc_to_relay())
         task2 = asyncio.create_task(relay_to_mc())
+        observers = [asyncio.create_task(wait_transport_closed(w)) for w in (mc_writer, tunnel_writer)]
 
         try:
             done, pending = await asyncio.wait(
-                [task1, task2],
+                [task1, task2, *observers],
                 return_when=asyncio.FIRST_COMPLETED,
             )
+            if stats['failed'] or any(observer in done for observer in observers):
+                abort_writer(mc_writer)
+                abort_writer(tunnel_writer)
 
             for task in pending:
                 task.cancel()
@@ -1281,11 +1349,12 @@ class HostCore:
         finally:
             task1.cancel()
             task2.cancel()
+            for observer in observers:
+                observer.cancel()
 
-            await asyncio.gather(task1, task2, return_exceptions=True)
+            await asyncio.gather(task1, task2, *observers, return_exceptions=True)
 
-            await close_writer(mc_writer)
-            await close_writer(tunnel_writer)
+            await safe_close_all(mc_writer, tunnel_writer)
 
             # 自己的那一份从"当前会话合计"里减去（上面说过：这个是合计，
             # 不是某个会话的。减完所有玩家都走了就自然回到 0）。
@@ -1322,6 +1391,8 @@ class HostCore:
         self.log("================================================")
 
         self._tasks = []
+        self._tunnel_workers = {}
+        self._pool_started = False
 
         control_task = asyncio.create_task(self.control_loop())
         ping_task = asyncio.create_task(self.ping_loop())
@@ -1335,6 +1406,7 @@ class HostCore:
         for tunnel_number in range(1, self.max_tunnels + 1):
             task = asyncio.create_task(self.tunnel_loop(tunnel_number))
             self.tunnel_tasks.append(task)
+            self._tunnel_workers[tunnel_number] = task
             self._tasks.append(task)
 
             # Small delay prevents all tunnels connecting at the exact
@@ -1342,6 +1414,7 @@ class HostCore:
             await asyncio.sleep(0.1)
 
         self.log("host started; waiting for players to connect.")
+        self._pool_started = True
         self.emit("started")
 
     async def stop(self, graceful=False):

@@ -5,13 +5,16 @@ Everything in here comes from the verified archived clients
 (`归档/host_client.py`, `归档/player_client.py`) and behaves identically:
 
   * TCP_NODELAY is enabled on every socket (Minecraft is latency sensitive).
-  * close_writer() never raises and always tries wait_closed().
+  * Terminated writers have bounded cleanup; cancellation aborts the transport.
   * The read buffer is 64 KiB in both directions.
 """
 
 import asyncio
 import socket
 import time
+import logging
+import struct
+import os
 
 # Keep this identical to the archived clients: 64 KiB.
 BUFFER_SIZE = 64 * 1024
@@ -27,6 +30,7 @@ def enable_tcp_nodelay(writer):
         sock = writer.get_extra_info("socket")
 
         if sock is not None:
+            enable_tcp_keepalive(sock)
             sock.setsockopt(
                 socket.IPPROTO_TCP,
                 socket.TCP_NODELAY,
@@ -37,31 +41,87 @@ def enable_tcp_nodelay(writer):
         pass
 
 
-async def close_writer(writer):
-    """Close a StreamWriter safely. Never raises, never blocks forever."""
+def enable_tcp_keepalive(sock):
+    """Kernel probes do not insert bytes into opaque application streams."""
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 9)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 3)
+        elif hasattr(socket, 'SIO_KEEPALIVE_VALS'):
+            sock.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 9000, 3000))
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
+    except (OSError, AttributeError) as exc:
+        # Some Windows releases expose constants without accepting the option.
+        try:
+            sock.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 9000, 3000))
+            logging.getLogger(__name__).info('TCP keepalive: system probe count, idle=9s interval=3s')
+        except (OSError, AttributeError):
+            logging.getLogger(__name__).warning('TCP keepalive uses system defaults: %s', type(exc).__name__)
+
+
+def abort_writer(writer):
+    if writer is not None:
+        try:
+            sock = writer.get_extra_info('socket')
+            if sock:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
+                    struct.pack('HH' if os.name == 'nt' else 'ii', 1, 0))
+        except (OSError, AttributeError):
+            pass
+        try:
+            writer.transport.abort()
+        except Exception:
+            pass
+
+
+async def close_writer(writer, timeout=2.0):
+    """Release a terminated stream, even when unsent data cannot drain."""
     if writer is None:
         return
-
-    try:
-        if writer.is_closing():
-            return
-    except Exception:
-        pass
-
     try:
         writer.close()
+        await asyncio.wait_for(writer.wait_closed(), timeout)
+    except asyncio.CancelledError:
+        abort_writer(writer)
+        raise
     except Exception:
-        return
-
-    try:
-        await writer.wait_closed()
-    except Exception:
-        pass
+        abort_writer(writer)
 
 
 async def safe_close_all(*writers):
+    # Start both closes before awaiting either; a blocked guest must not hold
+    # the Host's backend connection open (or the other way around).
     for writer in writers:
-        await close_writer(writer)
+        if writer is not None:
+            try:
+                writer.close()
+            except Exception:
+                abort_writer(writer)
+    try:
+        await asyncio.gather(*(close_writer(w) for w in writers))
+    except asyncio.CancelledError:
+        for writer in writers:
+            abort_writer(writer)
+        raise
+
+
+async def wait_transport_closed(writer):
+    """Notice a TCP reset even while the byte pump is blocked in drain()."""
+    # Do not await the protocol's shared close Future here: cancelling an
+    # observer must not cancel the owner's eventual wait_closed().
+    while not writer.is_closing():
+        try:
+            sock = writer.get_extra_info('socket')
+            error = sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) if sock else 0
+            if error:
+                logging.getLogger(__name__).info('TCP transport failed during backpressure: errno=%s', error)
+                abort_writer(writer)
+                return
+        except (OSError, AttributeError):
+            pass
+        await asyncio.sleep(.1)
 
 
 def local_ipv4_addresses():

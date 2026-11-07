@@ -3803,9 +3803,19 @@ class ClientController:
                 time.monotonic() + MODE_SWITCH_SILENT_MAX_S
             )
 
+        recovery_epoch = self.engine.recovery_epoch
+        try:
+            config = self._collect_config(role_override=role)
+            config.mode = target_mode
+        except Exception as exc:
+            self.engine._push('rebuild_failed', text=str(exc))
+            return
         self._rebuild_in_flight = True
 
         def worker():
+            if not self.engine.connection_requested or recovery_epoch != self.engine.recovery_epoch:
+                self._rebuild_in_flight = False
+                return
             # ★ 用户 2026-09-30 第 1 条：自动重连**一律重建通路**。
             #   放在这里（工作线程、stop 之前）而不是调用方那侧：
             #   * 离开 Tk 线程，和打洞循环的其它改写点同一条线程；
@@ -3817,7 +3827,7 @@ class ClientController:
             clean = True
 
             try:
-                clean = self.engine.stop_session(timeout=15)
+                clean = self.engine.stop_session(timeout=15, recovery_epoch=recovery_epoch)
             except Exception as e:
                 self.engine._push("log", text=f"停止旧连接失败：{e}")
                 clean = False
@@ -3838,25 +3848,29 @@ class ClientController:
                 #
                 # `role_override` is mandatory here: rebuilding as the wrong
                 # role is the "host turns into a player and the room dies" bug.
-                config = self._collect_config(role_override=role)
+                if (not self.engine.connection_requested
+                        or recovery_epoch != self.engine.recovery_epoch):
+                    return
 
                 # ★ P0（2026-09-28）：模式用**调用那一刻**的快照覆盖。这一行
                 # 就是"房主切模式后新会话还走旧传输"的根治点 —— 界面线程随后
                 # 任何一次把 config.mode 写回旧值都不会影响这一次重建。
                 config.mode = target_mode
 
-                self.engine.start_session(config, auth=self.auth, timeout=25)
+                self.engine.start_session(config, auth=self.auth, timeout=25,
+                                          recovery_epoch=recovery_epoch)
 
                 self.engine._push("log", text="已按新的连接模式重建隧道")
                 # 让界面线程去重排房间级任务（tk 变量只能在界面线程碰）。
-                self.engine._push("rebuild_done")
+                self.engine._push("rebuild_done", recovery_epoch=recovery_epoch)
             except Exception as e:
                 # 失败必须把界面恢复成"已停止"，否则用户看到的是"还在运行、
                 # 但用什么都不通"的半死状态 —— 那正是他报的另一半问题。
                 self.engine._push(
                     "log", text=f"按新模式重建失败：{e}（可手动重新连接）"
                 )
-                self.engine._push("rebuild_failed", text=str(e))
+                if recovery_epoch == self.engine.recovery_epoch:
+                    self.engine._push("rebuild_failed", text=str(e))
             finally:
                 self._rebuild_in_flight = False
 
@@ -3946,6 +3960,9 @@ class ClientController:
             "AUTH_INVALID",
             "AUTHENTICATION",          # "authentication required"（中继的英文说法）
             "NOT_LOGGED_IN",
+            "RECOVERY_DENIED",
+            "HOST_RELEASED",
+            "ROOM_NOT_FOUND",
             "ROOM_CLOSED",
             "OWNER_LEFT_ROOM",
         ):
@@ -3962,6 +3979,7 @@ class ClientController:
         终态一共五类（协调者口径）：用户点停止/主动退房、被踢、房间被销毁、
         版本不一致、登录失效（token 无效/被禁用）、免登录被要求登录。
         """
+        self.engine.cancel_connection_intent()
         self._reconnect_phase = "stopped"
         self._reconnect_stop_reason = str(reason or "")
         self._reconnect_attempt = 0
@@ -4137,6 +4155,14 @@ class ClientController:
 
             return
 
+        if kind == 'left' and self.engine.connection_requested:
+            self.running = True  # Preserve requested intent while the core tears down.
+            self._trigger_auto_reconnect(reason or 'Host 网络连接中断')
+            self._refresh_room_ui()
+            return
+        if kind != 'left':
+            self.engine.cancel_connection_intent()
+
         # ============================================================================
         #  ★ 用户 2026-10-03（重申；实测仍未生效的正是这一条）
         # ============================================================================
@@ -4263,6 +4289,8 @@ class ClientController:
     def _can_auto_reconnect(self):
         """现在允许自动重连吗（不满足就什么都不做）。"""
         phase = getattr(self, "_reconnect_phase", "running")
+        if not self.engine.connection_requested:
+            return False
 
         # 正在自动重连的这一次**必须能接着跑**：掉线那一刻 `running` 会被清成
         # False（世界那侧停了），但重连本身还没结束 —— 拿 `running` 当闸门会把
@@ -4399,6 +4427,12 @@ class ClientController:
         # 什么都不做，这次自动重连就**停在"正在自动重连"上**：`running` 是 False、
         # `_reconnect_phase` 是 `reconnecting`，谁也不再来叫醒它（按钮永远不恢复、
         # 退避也不再继续）。所以这里自己等一小会儿再试（有界，免得卡死）。
+        if not self.engine.connection_requested:
+            return
+        room = self.engine.room_current()
+        if room is None or not room.running:
+            self._schedule_room_recovery(delay_ms=0)
+            return
         if getattr(self, "_rebuild_in_flight", False):
             deferred = int(getattr(self, "_reconnect_deferred", 0) or 0) + 1
             self._reconnect_deferred = deferred
@@ -4962,6 +4996,7 @@ class ClientController:
 
 
     def on_stop(self):
+        self.engine.cancel_connection_intent()
         # ★ 2026-10-03（分析结论 E4）：以前 `if not self.running: return` ——
         #   自动重连期间 `running=False` 但按钮是**可用**的（`_session_busy()`），
         #   于是"点停止毫无反应"。现在只要真的忙（在跑或正在重建/重连）就处理。
@@ -5223,6 +5258,9 @@ class ClientController:
             # 事件泵每轮之后把界面按回去，直到 `rebuild_done` / `rebuild_failed`。
 
             elif kind == "rebuild_done":
+                if (not self.engine.connection_requested
+                        or event.get('recovery_epoch', self.engine.recovery_epoch) != self.engine.recovery_epoch):
+                    continue
                 # 重建完成：立刻按新模式重新对齐 NAT 监测 / 打洞，别让新会话
                 # 在"洞还没开始打"的窗口里干等（用户报的换模式后连不上）。
                 #
@@ -5290,6 +5328,8 @@ class ClientController:
 
                 # 静默期到此结束：新模式已经起来了，界面按正常状态显示。
                 self._mode_switch_silent = False
+                self._started_reported = None
+                self._report_started(True)
 
                 with contextlib.suppress(Exception):
                     self._sync_room_nat()
@@ -6065,6 +6105,7 @@ class ClientController:
         `message` 是给"被踢"这类需要带发起者/原因的通知用的完整正文；给了就
         原样显示（调用方已经逐句 tr() 过），不再套默认那句。
         """
+        self.engine.cancel_connection_intent()
         if self.running:
             with contextlib.suppress(Exception):
                 self.on_stop()
@@ -6128,9 +6169,11 @@ class ClientController:
 
         用后台线程做：open_room() 是阻塞的（最长十几秒），不能卡住界面。
         """
+        if getattr(self, '_room_recovery_in_flight', False):
+            return
         session = self.engine.room_current()
 
-        if session is None:
+        if session is None and (not self.engine.connection_requested or not self.engine._room_join_args):
             # 引擎里已经没有房间了：直接复位就行，不用重连。
             self._refresh_room_ui()
             self._refresh_room_list_soon()
@@ -6140,7 +6183,12 @@ class ClientController:
         with contextlib.suppress(Exception):
             self.engine._room_was_host = bool(session.state.is_host)
 
+        self._room_recovery_in_flight = True
+        recovery_epoch = self.engine.recovery_epoch
         def start():
+            if recovery_epoch != self.engine.recovery_epoch:
+                self._room_recovery_in_flight = False
+                return
             # 记下要重连的房间名（重连用得到，界面上也要显示）。
             state = self.engine.room_state()
             name = ""
@@ -6159,16 +6207,32 @@ class ClientController:
                 ok, message = self.engine.auto_rejoin()
 
                 def finish():
+                    self._room_recovery_in_flight = False
+                    if recovery_epoch != self.engine.recovery_epoch:
+                        return
                     if ok:
                         self.log(message, kind="ok")
                         self._room_close_notified = False
                         self._refresh_room_ui()
                         self._refresh_room_list_soon()
+                        self._started_reported = None
+                        if self.engine.connection_requested:
+                            self.running = True
+                            self._reconnect_phase = 'reconnecting'
+                            self._reconnect_session()
                         return
 
                     # 重连不上：房间确实回不去了，把本地收拾干净 ——
                     # 这一步就是"按钮状态跟着复位"，不再需要手动退出房间。
                     self.log(f"automatic rejoin failed: {message}", kind="warn")
+                    if str(message).startswith('HOST_RELEASED'):
+                        self._on_host_gone('released', message)
+                        return
+                    if self.engine.connection_requested and not self._is_terminal_failure(message):
+                        self.running = True
+                        self._reconnect_phase = 'reconnecting'
+                        self._trigger_auto_reconnect(message)
+                        return
 
                     self._teardown_room_locally(
                         reason=f"与房间的连接已断开（{message}）",

@@ -95,10 +95,10 @@ def _unfingerprinted(rel, name):
 
     return False
 
-README_TEMPLATE = """CraftLink v5.1.4 候选部署包（未完成 VPS 验收）
+README_TEMPLATE = """CraftLink v5.1.5 候选部署包（未完成 VPS 验收）
 ================================================================
 源码使用 Git 管理；本包由 scripts/make_build.py 生成。
-当前版本加粗普通界面文字，连接状态页保持原样；私有配置及网络核心保持原逻辑。
+当前版本修复连接清理、临时网络故障恢复及错误在线状态；界面布局和私有配置保留。
 公共客户端默认使用示例地址；老用户保留原设置，自用地址文件只在私有分发目录。
 
 已有部署必须先备份并保值迁移，不能先覆盖旧 Compose：
@@ -113,8 +113,8 @@ README_TEMPLATE = """CraftLink v5.1.4 候选部署包（未完成 VPS 验收）
 私有配置不在本包中，严禁将其补进公共压缩包。
 客户端运行 CraftLink.exe；控制台排查使用 CraftLink-console.exe。
 源码运行先 pip install -r requirements.txt，再 python client/main.py。
-中继和两端客户端同步更新为 5.1.4；面板源码不变，复用原 5.1.1 面板镜像。
-本版未部署 VPS；脱敏源码按授权发布至 dev，master 空占位，legacy 保留旧历史。
+中继和两端客户端同步更新为 5.1.5；面板源码不变，复用原 5.1.1 面板镜像。
+本候选未部署 VPS、未推送；master 保留现状，legacy 保留旧历史。
 用户验收后另行授权发布源码和正式版本标签。
 
 共 {count} 个文件：

@@ -81,6 +81,8 @@ def connection_rows(state, streams=(), direct_rows=(), carriers=None):
                                else "P2P 网络隧道仍就绪")
             if path == "direct":
                 details.append("中继备用就绪" if row.get("relay_ready") else "中继备用恢复中")
+            elif path == 'reconnecting':
+                details.append('中继通道恢复中')
             elif row.get("switch_phase") in ("preparing", "ready"):
                 details.append("正在验证并切换直连")
             elif row.get("switch_phase") == "retry_wait":

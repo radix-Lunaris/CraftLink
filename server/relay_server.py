@@ -267,31 +267,60 @@ def enable_tcp_nodelay(writer):
     try:
         sock = writer.get_extra_info("socket")
         if sock is not None:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            for option, value in (('TCP_KEEPIDLE', 9), ('TCP_KEEPINTVL', 3), ('TCP_KEEPCNT', 3)):
+                if hasattr(socket, option):
+                    try:
+                        sock.setsockopt(socket.IPPROTO_TCP, getattr(socket, option), value)
+                    except OSError:
+                        log('[TCP KEEPALIVE]', option, 'unavailable; using system default')
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     except Exception:
         pass
 
 
-async def close_writer(writer):
-    """Close a StreamWriter exactly once, never raising."""
+def abort_writer(writer):
     if writer is None:
         return
-
+    import struct
     try:
-        if writer.is_closing():
-            return
-    except Exception:
+        sock = writer.get_extra_info('socket')
+        if sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
+                struct.pack('HH' if os.name == 'nt' else 'ii', 1, 0))
+    except (OSError, AttributeError):
         pass
+    with contextlib.suppress(Exception):
+        writer.transport.abort()
 
+
+async def close_writer(writer, timeout=2.0):
+    """Bound terminated-stream cleanup; preserve task cancellation."""
+    if writer is None:
+        return
     try:
         writer.close()
+        await asyncio.wait_for(writer.wait_closed(), timeout)
+    except asyncio.CancelledError:
+        abort_writer(writer)
+        raise
     except Exception:
-        return
+        abort_writer(writer)
 
-    try:
-        await writer.wait_closed()
-    except Exception:
-        pass
+
+async def wait_transport_closed(writer):
+    """A reset must interrupt a pump blocked on its other endpoint's drain."""
+    while not writer.is_closing():
+        try:
+            sock = writer.get_extra_info('socket')
+            error = sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) if sock else 0
+            if error:
+                log('[TCP CLOSED]', 'socket error during backpressure', f'errno={error}')
+                abort_writer(writer)
+                return
+        except (OSError, AttributeError):
+            pass
+        await asyncio.sleep(.1)
 
 
 def clean_token(value, max_len):
@@ -1193,14 +1222,16 @@ class Room(MembershipMixin):
 
         if pair.relay_task is not None and pair.relay_task is not asyncio.current_task() and not pair.relay_task.done():
             pair.relay_task.cancel()
-            try:
-                await pair.relay_task
-            except (asyncio.CancelledError, Exception):
-                pass
 
         # Releasing the TCP sockets makes both client loops exit.
-        await close_writer(pair.player_writer)
-        await close_writer(pair.tunnel_writer)
+        for writer in (pair.player_writer, pair.tunnel_writer):
+            if writer is not None:
+                with contextlib.suppress(Exception):
+                    writer.close()
+        await asyncio.gather(close_writer(pair.player_writer), close_writer(pair.tunnel_writer))
+        if pair.relay_task is not None and pair.relay_task is not asyncio.current_task():
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await asyncio.wait_for(asyncio.shield(pair.relay_task), 2.0)
 
         # ---- V2: mirror the finished session into the database ----
         if store is not None:
@@ -2040,7 +2071,7 @@ async def copy_stream(reader, writer, direction_name, pair):
         raise
 
     except Exception:
-        pass
+        pair.transport_failed = True
 
     finally:
         return total
@@ -2076,12 +2107,16 @@ async def bidirectional_relay(pair):
     task_host_to_player = asyncio.create_task(
         copy_stream(pair.tunnel_reader, pair.player_writer, "HOST->PLAYER", pair)
     )
+    observers = [asyncio.create_task(wait_transport_closed(w)) for w in (pair.player_writer, pair.tunnel_writer)]
 
     try:
         done, pending = await asyncio.wait(
-            [task_player_to_host, task_host_to_player],
+            [task_player_to_host, task_host_to_player, *observers],
             return_when=asyncio.FIRST_COMPLETED,
         )
+        if getattr(pair, 'transport_failed', False) or any(observer in done for observer in observers):
+            for writer in (pair.player_writer, pair.tunnel_writer):
+                abort_writer(writer)
 
         # One direction closed => the session has exactly one lifecycle.
         for task in pending:
@@ -2101,6 +2136,9 @@ async def bidirectional_relay(pair):
         raise
 
     finally:
+        for observer in observers:
+            observer.cancel()
+        await asyncio.gather(*observers, return_exceptions=True)
         log(
             "[RELAY END]",
             f"session={pair.session_id}",
@@ -2146,7 +2184,7 @@ def parse_hello(line):
     # 版本门（ADDITIVE）：新客户端在行尾多挂一个 `ver=<x.y.z>`。中继的版本
     # 检查在下面单独扫描整行，这里只是把它从**按位置解析**的字段里摘掉 ——
     # 否则 `HOST_TUNNEL <room> ver=3.0.8` 会把版本号当成 client_id。
-    parts = [p for p in parts if not p.startswith(("ver=", "caps=", "sid=", "side=", "resume=", "generation=", "peer="))]
+    parts = [p for p in parts if not p.startswith(("ver=", "caps=", "sid=", "side=", "resume=", "generation=", "peer=", "recover="))]
 
     if len(parts) < 2:
         return None, None, "", "", "", "BAD_HANDSHAKE"
@@ -2768,7 +2806,7 @@ async def handle_host(reader, writer, room_name, client_id, username, token=""):
                 #   重算按钮状态，**不自动重连**、**不弹窗**。用独立原因码，
                 #   客户端据此和"闪断"（HOST_LEFT，要尽量复用/自动重连）分开处理。
                 reason=_stop_reason,
-                code=room_members.HOST_STOPPED_CODE,
+                code=(room_members.HOST_STOPPED_CODE if _stopping else room_members.HOST_LEFT_CODE),
                 # 只有**明确说了**要停才跳过宽限。掉线/崩溃/模式重建必须走
                 # 宽限窗口 —— 那是它存在的唯一理由。
                 immediate=_stopping,
@@ -3671,7 +3709,7 @@ async def handle_rename(writer, client_id, username, token, new_username):
 
 
 async def handle_member_join(reader, writer, room_name, client_id, username,
-                             token, create=False, capacity=0, capabilities=()):
+                             token, create=False, capacity=0, capabilities=(), recovering=False):
     """
     Enter a room and stay in it.
 
@@ -3939,7 +3977,47 @@ async def handle_member_join(reader, writer, room_name, client_id, username,
     # 直接毁掉这一次进房 / 自动重连）。
     member.ready = False
 
+    recovery_pairs = []
+    if recovering:
+        previous = next((m for m in room.members.values() if m.client_id == client_id), None)
+        noted_room, noted_reason = room_registry.recall_removal(client_id)
+        if previous is None and noted_room == room.name and noted_reason in ('kick', 'leave', 'timeout', 'room_closed'):
+            writer.write(b'ERROR RECOVERY_DENIED\n')
+            await writer.drain()
+            await close_writer(writer)
+            return
+        if previous is not None:
+            credentials = (getattr(previous, 'token', ''), getattr(previous, 'guest_token', ''))
+            if (token in ('', '-') or token not in credentials
+                    or previous.removal_reason not in ('', 'drop')
+                    or not await room_members.member_identity_alive(previous)):
+                writer.write(b'ERROR RECOVERY_DENIED\n')
+                await writer.drain()
+                await close_writer(writer)
+                return
+            if (room.closed or room.closing or previous.closed and not previous.detached
+                    or room.members.get(previous.member_key) is not previous
+                    or previous.removal_reason not in ('', 'drop')):
+                writer.write(b'ERROR RECOVERY_DENIED\n')
+                await writer.drain()
+                await close_writer(writer)
+                return
+            # Authenticated recovery of the same identity, not a normal second
+            # login. Reuse the existing detached-seat handoff semantics.
+            previous.detached = True
+            previous.removal_reason = 'reconnected'
+            member.connecting = previous.connecting
+            recovery_pairs = [p.session_id for p in room.sessions.values()
+                              if previous.is_host or p.player_id == client_id]
+            if previous.is_host and room.host_writer is not None:
+                with contextlib.suppress(Exception):
+                    room.host_writer.transport.abort()
+            with contextlib.suppress(Exception):
+                previous.writer.transport.abort()
     room.add_member(member)
+    if recovery_pairs:
+        await asyncio.gather(*(room.remove_session(sid, reason='member transport recovered')
+                               for sid in recovery_pairs))
 
     log(
         "[ROOM JOIN]",
@@ -4105,6 +4183,9 @@ async def handle_member_join(reader, writer, room_name, client_id, username,
         # 释放必须发生在 remove_member() **之前**：那之后成员已经不在
         # room.members 里，权威判定（见 room_members.take_host_from）就认不出
         # "他是不是主机"了。
+        if (getattr(member, 'removal_reason', '') == 'reconnected'
+                and room.members.get(getattr(member, 'member_key', '')) is not member):
+            return
         removal_reason = getattr(member, "removal_reason", "") or "drop"
 
         # 房间已经销毁时，"drop" 的真实原因是房间没了（PROTOCOL §9 的
@@ -4998,6 +5079,7 @@ async def client_connected(reader, writer):
                     create=(role == "CREATE"),
                     capacity=member_capacity,
                     capabilities=set(auto_relay.extras(line).get("caps", "").split(",")),
+                    recovering=auto_relay.extras(line).get('recover') == '1',
                 )
 
             elif role == "PRESENCE":

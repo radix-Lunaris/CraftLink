@@ -244,6 +244,8 @@ class AutoStream:
         addr = getattr(getattr(direct, "peer", None), "addr", None)
         selected = self.paths.get(self.active)
         observed = self.active if selected and selected.alive else "reconnecting"
+        if self.phase == 'retry_wait' and self.active == 'relay' and not self.path_ready('relay'):
+            observed = 'reconnecting'
         return dict(session_id=self.session, peer=self.peer_id,
             active_path=observed, relay_ready=self.path_ready("relay"),
             direct_ready=self.qualified(), switch_phase=self.phase,

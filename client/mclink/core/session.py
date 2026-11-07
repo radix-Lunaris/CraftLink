@@ -1369,7 +1369,7 @@ class HostSession(SessionBase):
             return
 
         if self.core.control_online:
-            if online_tunnels > 0:
+            if online_tunnels > 0 or self.core.active_sessions:
                 self.set_state(STATE_ONLINE)
             else:
                 self.set_state(STATE_WAITING)

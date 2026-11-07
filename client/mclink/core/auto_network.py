@@ -11,6 +11,7 @@ from ..config.settings import APP_VERSION
 from . import protocol as proto
 from .auto_stream import parse_metadata
 from .auto_client import run_stream
+from .common import close_writer
 
 
 async def peer_tunnel(core, peer, is_host):
@@ -39,9 +40,7 @@ async def peer_tunnel(core, peer, is_host):
             core.log(f"[auto] network tunnel for {peer} unavailable: {exc}; retrying in 3s")
         finally:
             if writer:
-                writer.close()
-                with contextlib.suppress(Exception):
-                    await writer.wait_closed()
+                await close_writer(writer)
         await asyncio.sleep(3)
 
 

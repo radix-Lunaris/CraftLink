@@ -43,6 +43,9 @@ class MCLinkEngine:
 
         self._session = None
         self._session_lock = threading.Lock()
+        self._connection_requested = False
+        self._recovery_epoch = 0
+        self._room_recovery_lock = threading.Lock()
 
         #: Live room membership (V3). Separate from the Minecraft session: a
         #: person can be in a room without being connected to a world.
@@ -379,7 +382,20 @@ class MCLinkEngine:
 
         return str(getattr(getattr(session, "config", None), "mode", "") or "")
 
-    def start_session(self, config, auth=None, timeout=20):
+    @property
+    def connection_requested(self):
+        return self._connection_requested
+
+    @property
+    def recovery_epoch(self):
+        return self._recovery_epoch
+
+    def cancel_connection_intent(self):
+        with self._session_lock:
+            self._connection_requested = False
+            self._recovery_epoch += 1
+
+    def start_session(self, config, auth=None, timeout=20, recovery_epoch=None):
         """
         Start a host or player session. Blocks the GUI thread only for the
         short setup phase (socket creation), never for the whole session.
@@ -392,16 +408,29 @@ class MCLinkEngine:
         self.start_loop()
 
         # Ensure any previous session is gone first.
-        self.stop_session(timeout=15)
+        with self._session_lock:
+            if recovery_epoch is not None:
+                if not self._connection_requested or recovery_epoch != self._recovery_epoch:
+                    raise RuntimeError('连接恢复已取消')
+            else:
+                self._connection_requested = True
+                self._recovery_epoch += 1
+            epoch = self._recovery_epoch
+        self.stop_session(timeout=15, recovery_epoch=epoch)
 
         # ★ v3.9.16：开新会话时，上一轮"host 没了"的事实作废。
         # 它是**那一轮**的结论，不该跨越新会话继续生效。
         self._host_gone = None
 
+        session = None
+        def emit_session(kind, **payload):
+            # A cancelled old core may finish after its replacement starts.
+            if kind == 'log' or (session is not None and self._session is session):
+                self._push(kind, **payload)
         if config.role == "host":
-            session = HostSession(config, self._push, auth=auth)
+            session = HostSession(config, emit_session, auth=auth)
         else:
-            session = PlayerSession(config, self._push, auth=auth)
+            session = PlayerSession(config, emit_session, auth=auth)
 
         # V3 direct path: the candidate exchange rides the room membership
         # connection, which the ENGINE owns (not the session). Injecting a
@@ -413,12 +442,17 @@ class MCLinkEngine:
         session.engine_provider = self
 
         with self._session_lock:
+            if not self._connection_requested or epoch != self._recovery_epoch:
+                raise RuntimeError('连接恢复已取消')
             self._session = session
 
         self._started_at = time.time()
 
         try:
             self.submit(session.start(), timeout=timeout)
+            if not self._connection_requested or epoch != self._recovery_epoch:
+                self.submit(session.stop(), timeout=10)
+                raise RuntimeError('连接恢复已取消')
         except Exception as e:
             # ============================================================================
             #  启动超时 = 必须真的把它停下来，不能只把引用丢掉
@@ -443,7 +477,7 @@ class MCLinkEngine:
 
         return session
 
-    def stop_session(self, timeout=15, graceful=False):
+    def stop_session(self, timeout=15, graceful=False, recovery_epoch=None):
         """
         Stop the Minecraft session.
 
@@ -483,7 +517,11 @@ class MCLinkEngine:
 
         The ROOM itself is untouched either way: stopping is not closing.
         """
+        if graceful:
+            self.cancel_connection_intent()
         with self._session_lock:
+            if recovery_epoch is not None and recovery_epoch != self._recovery_epoch:
+                return True
             session = self._session
             self._session = None
 
@@ -546,6 +584,9 @@ class MCLinkEngine:
         host 自己**不会**走到这里：`RoomSession` 在 `state.is_host` 为真时
         跳过拆除（那是他自己停服的回显，不是"host 没了"）。
         """
+        expected = self._session
+        if code in ('HOST_STOPPED', 'HOST_RELEASED'):
+            self.cancel_connection_intent()
         now = time.time()
         previous = self._host_gone
 
@@ -592,12 +633,12 @@ class MCLinkEngine:
 
         try:
             asyncio.run_coroutine_threadsafe(
-                self._async_host_gone_teardown(code, reason or code), loop
+                self._async_host_gone_teardown(code, reason or code, expected), loop
             )
         except Exception as e:  # noqa: BLE001
             self.log_event("host.gone.schedule_failed", error=str(e))
 
-    async def _async_host_gone_teardown(self, code, reason=""):
+    async def _async_host_gone_teardown(self, code, reason="", expected=None):
         """
         在引擎的事件循环里停掉 Minecraft 会话（host 没了）。
 
@@ -608,6 +649,8 @@ class MCLinkEngine:
         """
         with self._session_lock:
             session = self._session
+            if session is not expected:
+                return
 
             # 摘掉引用（和 stop_session 同一把锁），GUI 那侧随后就看不到它了。
             if self._session is session:
@@ -1294,20 +1337,32 @@ class MCLinkEngine:
 
         Returns (ok, message). Never raises.
         """
-        details = self._room_join_args
+        if not self._room_recovery_lock.acquire(blocking=False):
+            return False, '房间恢复已在进行'
+        try:
+            return self._recover_room(timeout)
+        finally:
+            self._room_recovery_lock.release()
+
+    def _recover_room(self, timeout):
+        details = dict(self._room_join_args or {})
 
         if not details:
             return False, "没有可以重连的房间"
 
         was_host = bool(self._room_was_host)
+        epoch = self.recovery_epoch
+        details['token'] = details.get('token') or self._guest_token
 
         try:
             state = self.open_room(
-                **details, timeout=timeout
+                **details, timeout=timeout, recovery_epoch=epoch
             )
         except Exception as e:  # noqa: BLE001
             return False, str(e)
 
+        if epoch != self.recovery_epoch:
+            return False, '连接恢复已取消'
         if not was_host:
             return True, "已重新连上房间"
 
@@ -1317,7 +1372,7 @@ class MCLinkEngine:
         ok, message = self.claim_host(timeout=timeout)
 
         if not ok:
-            return True, f"已重新连上房间（主机身份未取回：{message}）"
+            return False, f"HOST_RELEASED 主机身份未取回：{message}"
 
         return True, "已重新连上房间并取回主机身份"
 
@@ -1334,7 +1389,7 @@ class MCLinkEngine:
             return None
 
     def open_room(self, host, port, client_id, username, token, room,
-                  create=False, timeout=20, max_players=0, conn_mode=""):
+                  create=False, timeout=20, max_players=0, conn_mode="", recovery_epoch=None):
         """
         Create a room (owner) or join one (member). Called from the GUI thread.
 
@@ -1350,7 +1405,9 @@ class MCLinkEngine:
         from . import room as room_mod
 
         self.start_loop()
-        self.close_room(timeout=5)
+        if recovery_epoch is not None and recovery_epoch != self.recovery_epoch:
+            raise RuntimeError('连接恢复已取消')
+        self.close_room(timeout=5, preserve_intent=recovery_epoch is not None)
 
         # Remember how we got here, so `auto_rejoin()` can do it again after a
         # dropped membership connection. Stored BEFORE connecting: a join that
@@ -1457,6 +1514,7 @@ class MCLinkEngine:
             conn_mode=conn_mode,
         )
 
+        session.recovering = recovery_epoch is not None
         try:
             state = self.submit(_do(), timeout=timeout)
         except room_mod.RoomError as e:
@@ -1471,6 +1529,9 @@ class MCLinkEngine:
 
             raise RuntimeError(f"进入房间失败：{e}") from e
 
+        if recovery_epoch is not None and recovery_epoch != self.recovery_epoch:
+            self.submit(session.stop(), timeout=5)
+            raise RuntimeError('连接恢复已取消')
         with self._room_lock:
             self._room = session
             session.auto_manager = self.auto_manager
@@ -1578,13 +1639,15 @@ class MCLinkEngine:
 
         return ok, message, code
 
-    def close_room(self, timeout=10):
+    def close_room(self, timeout=10, preserve_intent=False):
         """
         Leave the room politely.
 
         LEAVE first so the relay frees the host slot immediately; a plain
         socket close would also tell it, but only after one watchdog tick.
         """
+        if not preserve_intent:
+            self.cancel_connection_intent()
         with self._room_lock:
             session = self._room
             self._room = None
@@ -1599,7 +1662,7 @@ class MCLinkEngine:
             return False
 
         try:
-            self.submit(session.leave(), timeout=timeout)
+            self.submit(session.stop() if preserve_intent else session.leave(), timeout=timeout)
         except Exception:
             with contextlib.suppress(Exception):
                 self.submit(session.stop(), timeout=timeout)

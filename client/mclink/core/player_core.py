@@ -25,6 +25,9 @@ from .common import (
     BUFFER_SIZE,
     RateMeter,
     close_writer,
+    safe_close_all,
+    wait_transport_closed,
+    abort_writer,
     enable_tcp_nodelay,
 )
 from . import protocol as proto
@@ -600,8 +603,7 @@ class PlayerCore:
             self.emit("relay_error", connection=connection_id, reason=str(e))
 
         finally:
-            await close_writer(relay_writer)
-            await close_writer(mc_writer)
+            await safe_close_all(relay_writer, mc_writer)
 
             # 只有真的加上去过才减，否则计数会变成负数。
             if paired:
@@ -739,7 +741,7 @@ class PlayerCore:
             # game data for a STUN room. See the host side for the reasoning.
             return
 
-        stats = {"to_relay": 0, "to_minecraft": 0}
+        stats = {"to_relay": 0, "to_minecraft": 0, "failed": False}
 
         self.log(f"[PLAYER {connection_id}] raw data forwarding started")
 
@@ -761,6 +763,7 @@ class PlayerCore:
                 raise
 
             except Exception:
+                stats['failed'] = True
                 return
 
         async def relay_to_minecraft():
@@ -781,16 +784,21 @@ class PlayerCore:
                 raise
 
             except Exception:
+                stats['failed'] = True
                 return
 
         task_mc_to_relay = asyncio.create_task(minecraft_to_relay())
         task_relay_to_mc = asyncio.create_task(relay_to_minecraft())
+        observers = [asyncio.create_task(wait_transport_closed(w)) for w in (mc_writer, relay_writer)]
 
         try:
             done, pending = await asyncio.wait(
-                [task_mc_to_relay, task_relay_to_mc],
+                [task_mc_to_relay, task_relay_to_mc, *observers],
                 return_when=asyncio.FIRST_COMPLETED,
             )
+            if stats['failed'] or any(observer in done for observer in observers):
+                abort_writer(mc_writer)
+                abort_writer(relay_writer)
 
             for task in pending:
                 task.cancel()
@@ -800,10 +808,13 @@ class PlayerCore:
         finally:
             task_mc_to_relay.cancel()
             task_relay_to_mc.cancel()
+            for observer in observers:
+                observer.cancel()
 
             await asyncio.gather(
                 task_mc_to_relay,
                 task_relay_to_mc,
+                *observers,
                 return_exceptions=True,
             )
 
