@@ -1,0 +1,161 @@
+# ============================================================
+#  MC-Link Relay Server (V2)  --  Docker Compose
+# ============================================================
+#
+#  启动:   docker compose up -d --build
+#  查看:   docker compose ps
+#  日志:   docker compose logs -f --tail=100
+#  停止:   docker compose down
+#
+# ============================================================
+#  重要：V2 需要连接 MySQL
+# ============================================================
+#
+#  中继容器通过 **容器名** 连接数据库，所以它必须和 MySQL 容器在同一个
+#  Docker 网络里。下面用 external network 加入 1Panel 已有的网络：
+#
+#      networks:
+#        mclink:
+#          external: true
+#          name: 1panel-network        <-- 换成你服务器上实际的网络名
+#
+#  在你服务器上执行下面命令，确认网络名和 MySQL 容器名：
+#
+#      docker inspect web-mysql80 --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+#      docker ps --format '{{.Names}}' | grep -i mysql
+#
+#  ================== 你的服务器（已实测确认）==================
+#    MySQL 容器   : web-mysql80   (mysql:8.0.46)
+#    网络         : 1panel-network
+#    PHP 容器     : web-php82     (1panel-php-fpm:8.2.33)
+#    nginx 容器   : web-nginx     (host 网络)
+#    中继容器需加入 : 1panel-network
+#
+#  所以下面的 networks.mclink.name 已经填好 1panel-network，不用再改。
+#  数据库密码见 panel/config.php 与下面的 MCLINK_DB_PASSWORD（要一致）。
+#
+#  如果不想动网络，也可以临时把 MCLINK_DB_ENABLED 设为 0：
+#  中继照常工作（Minecraft 联机不受影响），但账号登录与面板数据不可用。
+#
+# ============================================================
+#  提醒：容器名冲突（README 第 13 节记录的坑）
+#    如果已存在叫 mc-relay 的旧容器（即使已停止）：
+#        docker rm -f mc-relay
+#    再执行 docker compose up -d --build
+# ============================================================
+
+services:
+  mc-relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: "${MCLINK_RELAY_CONTAINER:-mc-relay}"
+    image: mc-link-relay:2.0.0
+
+    restart: unless-stopped
+
+    # ---- 网络 ----
+    networks:
+      - mclink
+
+    # ---- 端口 ----
+    # 19100 对公网发布（Minecraft 流量）
+    # 19101 只在 Docker 内网暴露（给 PHP 面板调用），绝不发布到宿主机
+    #
+    # [!] 19100/udp 是内置 STUN 服务（打洞用）。
+    #     TCP 和 UDP 是两套独立端口空间，同一个端口号不冲突，
+    #     但 Docker 需要分别映射 —— 只写 tcp 那一行的话，
+    #     STUN 在容器里根本收不到包，而且不会有任何报错，非常难查。
+    #     阿里云安全组也要单独放行 UDP 19100。
+    #     不想要这个功能就设 MCLINK_STUN_ENABLED=0。
+    ports:
+      - "${MCLINK_RELAY_PUBLIC_PORT:-19100}:19100/tcp"
+      # Built-in STUN: a consecutive UDP pair (MCLanP2P's layout). BOTH must
+      # be mapped; missing one is silent, and the client then cannot tell a
+      # cone NAT from a symmetric one. See server/Dockerfile.
+      - "3478:3478/udp"
+      - "3479:3479/udp"
+
+    expose:
+      - "${MCLINK_ADMIN_API_PORT:-19101}"
+
+    environment:
+      TZ: Asia/Shanghai
+
+      # ===================== 中继参数 =====================
+      MCLINK_MAX_PLAYERS: "${MCLINK_MAX_PLAYERS:-8}"
+      MCLINK_STATUS_FILE: "${MCLINK_STATUS_FILE:-/app/status/status.json}"
+      MCLINK_STATUS_INTERVAL: "${MCLINK_STATUS_INTERVAL:-10}"
+      MCLINK_HANDSHAKE_TIMEOUT: "${MCLINK_HANDSHAKE_TIMEOUT:-10}"
+      MCLINK_VERBOSE: "${MCLINK_VERBOSE:-1}"
+      # ---- 服务端日志（面板「下载服务端日志」用的就是这个文件）----
+      # 容器内路径；下面 volumes 里把它挂到宿主机，重建容器不会丢日志。
+      MCLINK_LOG_DIR: "${MCLINK_LOG_DIR:-/app/logs}"
+      MCLINK_LOG_FILE: "${MCLINK_LOG_FILE:-relay.log}"
+      # 单个日志文件到 5MB 就轮转，保留 3 份历史（relay.log.1 ~ .3）
+      MCLINK_LOG_MAX_BYTES: "${MCLINK_LOG_MAX_BYTES:-5242880}"
+      MCLINK_LOG_KEEP_FILES: "${MCLINK_LOG_KEEP_FILES:-3}"
+      # 内存里保留多少行（面板"最近 N 行"用）
+      MCLINK_LOG_RING_LINES: "${MCLINK_LOG_RING_LINES:-4000}"
+      MCLINK_ROOM_EMPTY_GRACE: "${MCLINK_ROOM_EMPTY_GRACE:-0}"
+
+      # ===================== 数据库 =======================
+      MCLINK_DB_ENABLED: "${MCLINK_DB_ENABLED:-1}"
+      # 用容器名，不是 127.0.0.1（容器里的 127.0.0.1 是容器自己）
+      MCLINK_DB_HOST: "${MCLINK_DB_HOST:-web-mysql80}"
+      MCLINK_DB_PORT: "${MCLINK_DB_PORT:-3306}"
+      MCLINK_DB_NAME: "${MCLINK_DB_NAME:-mclink}"
+      MCLINK_DB_USER: "${MCLINK_DB_USER:-mclink}"
+      MCLINK_DB_PASSWORD: "${MCLINK_DB_PASSWORD:?Missing MCLINK_DB_PASSWORD; run configuration migration first}"
+      MCLINK_DB_SYNC_INTERVAL: "${MCLINK_DB_SYNC_INTERVAL:-5}"
+      # ---- 数据库卡住也不能拖住中继（2026-09-15 现场故障的疫苗）----
+      # 启动阶段每一步（连接 / 探活 / 建表）最多等这么久。超时就降级：
+      # 面板与账号不可用，中继照样监听 19100、照样转发 Minecraft 原始字节。
+      # 以前这一步没有上限，所以数据库慢一下，全世界都进不来。
+      MCLINK_DB_BOOT_TIMEOUT: "${MCLINK_DB_BOOT_TIMEOUT:-20}"
+      # 单条 SQL 在 socket 上的读写上限（秒）。0 = 不限制，只在排查问题时用。
+      MCLINK_DB_QUERY_TIMEOUT: "${MCLINK_DB_QUERY_TIMEOUT:-30}"
+
+      # ===================== 账号 =========================
+      # 1 = 房主和玩家都必须先登录
+      MCLINK_REQUIRE_ACCOUNT: "${MCLINK_REQUIRE_ACCOUNT:-1}"
+      MCLINK_TOKEN_TTL: "${MCLINK_TOKEN_TTL:-43200}"
+
+      # 首次部署时用它创建管理员账号，格式 用户名:密码
+      # 创建成功后请把这一行删掉或清空，然后 docker compose up -d
+      MCLINK_BOOTSTRAP_ADMIN: "${MCLINK_BOOTSTRAP_ADMIN:-}"
+
+      # ===================== 管理 API =====================
+      # 供 PHP 面板调用。MCLINK_ADMIN_API_TOKEN 必须和面板配置里的一致，
+      # 请改成一段足够长的随机字符串（例如 48 位）。
+      MCLINK_ADMIN_API_ENABLED: "${MCLINK_ADMIN_API_ENABLED:-1}"
+      MCLINK_ADMIN_API_HOST: "${MCLINK_ADMIN_API_HOST:-0.0.0.0}"
+      MCLINK_ADMIN_API_PORT: "${MCLINK_ADMIN_API_PORT:-19101}"
+      MCLINK_ADMIN_API_TOKEN: "${MCLINK_ADMIN_API_TOKEN:?Missing MCLINK_ADMIN_API_TOKEN; run configuration migration first}"
+
+    volumes:
+      # 服务端日志：宿主机 ./logs 持久化，重建容器日志不丢
+      - ./logs:/app/logs
+      - mc-link-status:/app/status
+
+    # 2 核 2G 的 ECS 上留足余量给网站服务
+    mem_limit: 256m
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    stop_grace_period: 10s
+
+networks:
+  mclink:
+    external: true
+    # 已通过探测脚本确认：MySQL(web-mysql80) 和 PHP(web-php82) 都在这个网络里
+    name: "${MCLINK_DOCKER_NETWORK:-1panel-network}"
+
+volumes:
+  mc-link-status:
+    name: "${MCLINK_STATUS_VOLUME:-mc-link-status}"

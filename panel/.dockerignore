@@ -1,0 +1,14 @@
+**/.env*
+**/config.php
+**/config.local.php
+**/*.bak
+**/*.key
+**/*.pem
+**/__pycache__
+**/*.pyc
+logs
+status
+.git
+**/*.env
+**/*.env.*
+**/*.migration-tmp

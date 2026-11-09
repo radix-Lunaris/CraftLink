@@ -1,0 +1,64 @@
+# 私有部署参数：真实 .env 永不提交；仅允许示例模板。
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+!*.env.example
+**/config.php
+**/config.local.php
+mclink_config*.json
+credentials*.json
+.device_id
+settings.json
+*.pem
+*.key
+*.pfx
+*.p12
+*.sqlite*
+# 私有地址配置、敏感清单、历史备份：包括外部文件误拷入仓库的情况。
+*.local.json
+publication-denylist*.json
+*.private.*
+*.bundle
+*.gitbundle
+mclan-private/
+private/
+id_rsa*
+id_ed25519*
+*.crt
+# 构建与运行产物：交付包、日志、数据库和 EXE 不进源码仓库。
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ui-build-deps/
+logs/
+status/
+backups/
+data/
+.private/
+build/
+dist/
+*.exe
+*.zip
+*.tar
+*.tar.gz
+*.log
+*.bak
+*.dump
+/BUILD.txt
+/README.txt
+/docs/client-artifacts.json
+# 编辑器与操作系统文件。
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+*.migration-tmp
+
+# Actual encrypted login cache filename
+credentials.dat
+credentials.dat.*

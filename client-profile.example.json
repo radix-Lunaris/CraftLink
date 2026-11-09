@@ -1,0 +1,5 @@
+{
+  "server_host": "relay.example.invalid",
+  "server_port": 19100,
+  "update_url": "https://updates.example.invalid"
+}

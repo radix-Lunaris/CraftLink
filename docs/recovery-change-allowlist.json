@@ -1,0 +1,53 @@
+{
+  "baseline": "9ae0b2b",
+  "network_files": {
+    "client/mclink/core/auto_network.py": {
+      "previous_sha256": "09367a118d9731283def1cbcfaa2ea123faa22b471a865506e78df29b0604b2e",
+      "sha256": "660d8eeb103e6c3fa82d94444d3b0c9f27c63c8781e356c5a65fdc72a115ea3d"
+    },
+    "client/mclink/core/common.py": {
+      "previous_sha256": "5de15b88359167fb5fd55fe082399d67b4515e90337d70023fd4fdc7935e7bda",
+      "sha256": "75aeacd6cef35005d2059df23a094983e164dfb6b1d9f0c6a56e5f5287932856"
+    },
+    "client/mclink/core/engine.py": {
+      "previous_sha256": "198721520a7e7433a12e55f7e29da2a47f45a9f4229e430417e5692a8f194343",
+      "sha256": "211b4c1cc923c6787a55abd184af10b3f2ed410f93b363e2a025cc11b35c5dfe"
+    },
+    "client/mclink/core/host_core.py": {
+      "previous_sha256": "6839e6fd5196e776656b2fd53c73f9c38487f9053e059f3b843e377a67888b63",
+      "sha256": "0be6a8e0bb2d3e1612a47e187c936b093022b6de047204a4d892a9fae397a430"
+    },
+    "client/mclink/core/player_core.py": {
+      "previous_sha256": "e207696430ca0171f8ceb7763f4775191e7c1d3f2dde0ee7049188eb8b9a25e1",
+      "sha256": "e1b208b962befb902100555ff8178c84daaa98d0d2f1496bbe916ae69802e35d"
+    },
+    "client/mclink/core/room.py": {
+      "previous_sha256": "b4ff73a60ac00002e070dd727dff517a876135ebc53bcf2c7a9a0ef3569aa4f8",
+      "sha256": "edbd6cbe870c445b1e09d6a5db92ead56c8ac3801f1a652463ed1b5ea26812bd"
+    },
+    "client/mclink/core/auto_stream.py": {
+      "previous_sha256": "1c7970297d8edfc46d0d55b04f50ae60adc5c24b3fd3e0fb7aae42327bf53444",
+      "sha256": "9507d24a1ffc8c1ee997a21f15e981647ef8e144f4493cd6d4f57ee9335f9dc7"
+    },
+    "client/mclink/core/connection_status.py": {
+      "previous_sha256": "317a387d6e36f4637acd70a9aa0586c2c9f14ddd632c963ea73e46fdcebb02bb",
+      "sha256": "b983eceea4f6ab74fedf93ff115d0008ef01fa3a678a0b8df4b1f68e4475d2db"
+    },
+    "client/mclink/core/session.py": {
+      "previous_sha256": "b2e71870cb0264c001c4a9806bdda372e8f14e524051ccd5f6ae29eae468d5f1",
+      "sha256": "0f95601bf3d2c3490d6d62296bdaf64f4f7c96260a90c55284603ec9cca6af40"
+    }
+  },
+  "controller_methods": {
+    "_rebuild_tunnels": "955dccb0428013ecfc9f038ea3f2fd3fa00826a97b48c8f78b601556f978b53c",
+    "_is_terminal_failure": "a654093d84db59362f157957a1ee7cb6f071a8efffc50e1abc35746925f23bd9",
+    "_on_host_gone": "1a72e85d0cc29afc705aff107652fa7f6fee6028e6c1bdb938e455cde05e579b",
+    "_can_auto_reconnect": "9a174e26d96f3c5d52771d04200f447fbe2375f7fbdad80feb293c84b331868a",
+    "_reconnect_session": "c05ea955124f68351ca57b5e92694ade5b75884b5afceb21facd7c01ba26e578",
+    "on_stop": "f42e07cea33d03de5dab19b4b79027f3f1c1ca99abcb3dfd833396e20db6b452",
+    "_drain_events": "27d219bcf2094854ddef43fa9c69780836bafb88b67bba65a356948d25ea739f",
+    "_teardown_room_locally": "84a7641d92256fb1e120f2858294972cdcae2738dd1c8046c9a0a6b0b72f00eb",
+    "_schedule_room_recovery": "c59c1b772c4befa0794c5a881f50c431f986adcc1bfadca221939132ef709d5c",
+    "_reconnect_terminal": "b57d87e03264124fc660c330559fc999b64e24bc2ee992dbd224df05192491b3"
+  }
+}

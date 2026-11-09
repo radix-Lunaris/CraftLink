@@ -1,0 +1,16 @@
+{
+  "version": "5.1.4",
+  "status": "local-ui-candidate-awaiting-user-acceptance",
+  "font_audit": {"result": "pass", "light_widgets": 102, "dark_widgets": 102, "sizes_and_families": "preserved", "status_fonts": "unchanged", "callback_errors": []},
+  "desktop_audit": {"result": "pass", "pages": 5, "themes": 3, "languages": 3, "dialogs": 3, "callback_errors": []},
+  "previous_status_ui_audit": {"result": "pass", "dynamic_rows": "0 -> 2 -> 1 -> 0", "empty_gap_native_pixels": 14, "accepted_start_navigation": "pass", "member_window": "pass"},
+  "status_methods_ast_unchanged": 4,
+  "controller_and_network_baseline_tests": {"tests": 2, "result": "pass", "network_core_byte_identical_files": 29},
+  "screenshots": "docs/ui-preview-v514",
+  "artifact_provenance": "docs/client-artifacts.json and external dist/CraftLink-v5.1.4-candidate.json",
+  "full_network_regression_this_ui_change": "not-repeated; no networking logic changed",
+  "previous_published_ci": {"version": "5.1.3", "windows_tests_passed": 74, "ubuntu_tests_passed": 74, "run": 40381906327},
+  "remote_source_pushed": false,
+  "production_deployed": false,
+  "formal_release_tag": false
+}

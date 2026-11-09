@@ -1,0 +1,186 @@
+{
+  "version": "5.1.5",
+  "revision": "recovery-r1",
+  "date": "2026-11-07",
+  "base_commit": "9ae0b2b1b6d05215976b27013fb807ebed3edf81",
+  "runtime_commit": "4e2e7d0bdeaf31d90ba1de072b0be387196822a9",
+  "regression": {
+    "windows": {
+      "python": "3.11",
+      "tests": 90,
+      "failures": 0,
+      "errors": 0,
+      "seconds": 147.046
+    },
+    "linux": {
+      "python": "3.11.18",
+      "tests": 90,
+      "failures": 0,
+      "errors": 0,
+      "seconds": 98.795,
+      "runtime": "native Linux; byte-verified source snapshot",
+      "temporary_git_for_ignore_checks": true
+    }
+  },
+  "regression_new_cases": 16,
+  "red_before_fix": {
+    "date": "2026-11-07",
+    "baseline": "9ae0b2b",
+    "tests": 7,
+    "failures": 4,
+    "errors": 3,
+    "cases": [
+      "client cancel without abort",
+      "unbounded client close",
+      "serial pair close",
+      "unbounded server close",
+      "missing Host PONG",
+      "unexpected HOST_STOPPED",
+      "missing recovery intent guard"
+    ]
+  },
+  "backend_stalls": {
+    "windows": [
+      {
+        "paused_seconds": 5,
+        "cleanup_seconds": 0.515,
+        "cleaned_during_pause": false,
+        "post_resume_cleanup_seconds": 0.047,
+        "new_flow_hash_bytes_equal": true
+      },
+      {
+        "paused_seconds": 30,
+        "cleanup_seconds": 0.5,
+        "cleaned_during_pause": false,
+        "post_resume_cleanup_seconds": 0.047,
+        "new_flow_hash_bytes_equal": true
+      },
+      {
+        "paused_seconds": 90,
+        "cleanup_seconds": 0.5,
+        "cleaned_during_pause": false,
+        "post_resume_cleanup_seconds": 0.047,
+        "new_flow_hash_bytes_equal": true
+      }
+    ],
+    "linux": [
+      {
+        "paused_seconds": 5,
+        "cleanup_seconds": 0.202,
+        "cleaned_during_pause": true,
+        "post_resume_cleanup_seconds": 0.0,
+        "new_flow_hash_bytes_equal": true
+      },
+      {
+        "paused_seconds": 30,
+        "cleanup_seconds": 0.203,
+        "cleaned_during_pause": true,
+        "post_resume_cleanup_seconds": 0.0,
+        "new_flow_hash_bytes_equal": true
+      },
+      {
+        "paused_seconds": 90,
+        "cleanup_seconds": 0.307,
+        "cleaned_during_pause": true,
+        "post_resume_cleanup_seconds": 0.0,
+        "new_flow_hash_bytes_equal": true
+      }
+    ]
+  },
+  "ui": {
+    "pages": 5,
+    "themes": 3,
+    "languages": 3,
+    "dialogs": 3,
+    "callback_errors": 0,
+    "font_weight_widgets_per_theme": 102,
+    "status_fonts": "unchanged",
+    "six_previous_ui_behaviors": "passed"
+  },
+  "preservation": {
+    "manual_algorithm_files_byte_identical": 10,
+    "network_baseline": "original retained, 9 lifecycle files separately allowlisted",
+    "controller_baseline": "original retained, 10 methods separately allowlisted",
+    "panel_and_desktop_view_files": "byte identical to base"
+  },
+  "clients": {
+    "source_commit": "4e2e7d0bdeaf31d90ba1de072b0be387196822a9",
+    "version": "5.1.5",
+    "revision": "recovery-r1",
+    "python": "3.11.9",
+    "pyinstaller": "6.22.2",
+    "pillow": "12.3.0",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "artifacts": [
+      {
+        "file": "dist/artifacts/CraftLink.exe",
+        "bytes": 20789457,
+        "sha256": "022dfc27b6dc3677730506ea2cca10eaae8916397dc45eeb42d3dd862766e013",
+        "self_test": {
+          "ui": "customtkinter",
+          "ui_smoke": "ok",
+          "version": "5.1.5",
+          "revision": "recovery-r1",
+          "external_address_profile_loaded": false,
+          "public_placeholder_defaults": true,
+          "protocol": "auto_stream_v1",
+          "self_test": "ok"
+        }
+      },
+      {
+        "file": "dist/artifacts/CraftLink-console.exe",
+        "bytes": 20793435,
+        "sha256": "947e8f97ed77369dab00a67e0ff7ce2d851f1c55f3da9d72aece59756782dd05",
+        "self_test": {
+          "ui": "customtkinter",
+          "ui_smoke": "ok",
+          "version": "5.1.5",
+          "revision": "recovery-r1",
+          "external_address_profile_loaded": false,
+          "public_placeholder_defaults": true,
+          "protocol": "auto_stream_v1",
+          "self_test": "ok"
+        }
+      }
+    ]
+  },
+  "private_profile": {
+    "bytes_unchanged_from_v514": true,
+    "automatic_frozen_load": true,
+    "included_in_public_source_or_candidate": false
+  },
+  "security": {
+    "source_scan_findings": 0,
+    "runtime_commit_history_objects_scanned": 310,
+    "history_findings": 0,
+    "staged_scan_findings": 0
+  },
+  "test_teardown_warnings": {
+    "windows": {
+      "unhandled_task_exception_markers": 0,
+      "cancelled_broadcast_gather_warnings": 2
+    },
+    "linux": {
+      "unhandled_task_exception_markers": 0,
+      "cancelled_broadcast_gather_warnings": 2
+    }
+  },
+  "warning_note": "Cancelled gather warnings originate in unchanged server/room_members.py broadcast teardown; no test failures; no unhandled Task exception markers. No claim of warning-free network teardown.",
+  "environment_notes": [
+    "Linux source snapshot was verified byte-identical and tested under Python 3.11 in a native Linux temporary filesystem with an empty local Git repository for ignore checks. Mounted-filesystem and missing-Git setup attempts are preserved in local logs; no tests or timeouts relaxed.",
+    "Windows can defer reset delivery behind paused reads; recovery after resume is measured separately."
+  ],
+  "pending_acceptance": [
+    "User VPS rebuild and authentication/room operation",
+    "Two real public NAT4 endpoints: Host and Player network changes",
+    "Real Minecraft pause, disconnect and rejoin without tool restart or game kick",
+    "Real public P2P-to-relay fallback on networks that can establish direct mode"
+  ],
+  "publication": {
+    "pushed": false,
+    "vps_deployed": false,
+    "official_tag_created": false,
+    "client_manifest": "docs/client-artifacts.json",
+    "candidate": "dist/v5.1.5Full"
+  }
+}
