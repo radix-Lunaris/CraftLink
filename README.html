@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CraftLink（方块联机）· 部署与开发说明书</title>
+<meta name="description" content="CraftLink 服务端部署、首次配置、客户端填写服务器地址、从 3.9.20 原地升级与回滚、开发者门禁与回归。自包含 HTML，无外链、无 JS。">
+<style>
+  :root{
+    --bg:#f7f8fb; --card:#ffffff; --fg:#1c2230; --muted:#5d6679;
+    --line:#e2e6ef; --acc:#1f5ae0; --acc2:#0f9d6e; --warn:#b45309;
+    --danger:#b3261e; --code-bg:#0f172a; --code-fg:#e6edf7; --inline-bg:#eef2f9;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0c1018; --card:#141a25; --fg:#e8ecf4; --muted:#9aa6bb;
+      --line:#252d3d; --acc:#7ea6ff; --acc2:#3ddc84; --warn:#f0b45a;
+      --danger:#ff8a80; --code-bg:#070b12; --code-fg:#dbe6f5; --inline-bg:#1b2331;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:16px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC",
+         "Microsoft YaHei",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:32px 20px 96px}
+  header.hero{
+    background:linear-gradient(135deg,#1f5ae0,#0f9d6e); color:#fff;
+    border-radius:18px; padding:34px 30px; box-shadow:var(--shadow);
+  }
+  header.hero h1{margin:0 0 8px; font-size:30px; line-height:1.3}
+  header.hero p{margin:6px 0 0; opacity:.95}
+  header.hero .tags{margin-top:16px; display:flex; flex-wrap:wrap; gap:8px}
+  header.hero .tags span{
+    background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.3);
+    border-radius:999px; padding:3px 12px; font-size:13px;
+  }
+  h2{
+    font-size:23px; margin:52px 0 14px; padding-bottom:8px;
+    border-bottom:2px solid var(--line);
+  }
+  h3{font-size:18px; margin:30px 0 10px}
+  h4{font-size:16px; margin:22px 0 8px; color:var(--muted)}
+  p,li{color:var(--fg)}
+  a{color:var(--acc); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,kbd,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+  code{background:var(--inline-bg); border-radius:5px; padding:1px 6px; font-size:14px}
+  pre{
+    background:var(--code-bg); color:var(--code-fg); border-radius:12px;
+    padding:16px 18px; overflow:auto; font-size:14px; line-height:1.6;
+    border:1px solid rgba(255,255,255,.06);
+  }
+  pre code{background:none;color:inherit;padding:0;font-size:14px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:20px 22px; box-shadow:var(--shadow); margin:18px 0;
+  }
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:15px}
+  th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top}
+  th{background:var(--inline-bg); font-weight:600}
+  tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--inline-bg) 45%,transparent)}
+  .note,.warn,.danger,.ok{
+    border-left:5px solid var(--acc); background:var(--card);
+    border-radius:0 12px 12px 0; padding:12px 16px; margin:16px 0;
+    box-shadow:var(--shadow);
+  }
+  .warn{border-left-color:var(--warn)}
+  .danger{border-left-color:var(--danger)}
+  .ok{border-left-color:var(--acc2)}
+  .note b,.warn b,.danger b,.ok b{display:block; margin-bottom:4px}
+  nav.toc{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px 22px; box-shadow:var(--shadow); margin:24px 0 0;
+  }
+  nav.toc h2{margin:0 0 8px; font-size:17px; border:0; padding:0}
+  nav.toc ol{margin:0; padding-left:22px; columns:2; column-gap:28px}
+  @media (max-width:720px){ nav.toc ol{columns:1} header.hero h1{font-size:24px} }
+  .steps{counter-reset:s; list-style:none; padding-left:0}
+  .steps>li{
+    counter-increment:s; position:relative; padding:10px 0 10px 44px;
+    border-bottom:1px dashed var(--line);
+  }
+  .steps>li:last-child{border-bottom:0}
+  .steps>li::before{
+    content:counter(s); position:absolute; left:0; top:12px;
+    width:26px; height:26px; border-radius:50%; background:var(--acc); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;
+  }
+  .kv{display:grid; grid-template-columns:200px 1fr; gap:2px 14px; font-size:15px}
+  .kv div{padding:7px 0; border-bottom:1px dashed var(--line)}
+  .kv div:nth-child(odd){color:var(--muted)}
+  @media (max-width:640px){ .kv{grid-template-columns:1fr} .kv div:nth-child(odd){border-bottom:0;padding-bottom:0} }
+  footer{margin-top:64px; color:var(--muted); font-size:14px; border-top:1px solid var(--line); padding-top:18px}
+  .pill{display:inline-block;background:var(--inline-bg);border:1px solid var(--line);
+        border-radius:999px;padding:1px 10px;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>CraftLink（方块联机）· 部署与开发说明书</h1>
+  <p>给新用户：怎么把服务端跑起来、把面板配好、把客户端连上。</p>
+  <p>给未来开发者：仓库长什么样、门禁和回归怎么跑、品牌怎么改。</p>
+  <p>给老用户：<b>从 3.9.20 升级到本版本</b>的备份 / 原地升级 / 回滚全流程。</p>
+  <div class="tags">
+    <span>GPLv3</span><span>全 Docker 部署</span><span>一条命令安装</span>
+    <span>自包含 HTML · 无外链 · 无 JS</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>目录</h2>
+  <ol>
+    <li><a href="#what">这是什么</a></li>
+    <li><a href="#prereq">部署前置条件</a></li>
+    <li><a href="#install">一条命令安装（服务端）</a></li>
+    <li><a href="#first-config">首次配置（端口 / 安全入口 / 管理员）</a></li>
+    <li><a href="#client">客户端：怎么装、怎么填服务器地址</a></li>
+    <li><a href="#upgrade">★ 从 3.9.20 升级到本版本</a></li>
+    <li><a href="#dev">面向未来开发者</a></li>
+    <li><a href="#faq">常见问题速查</a></li>
+    <li><a href="#license">许可证与安全</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="what">1. 这是什么</h2>
+
+<p>CraftLink 让 Minecraft 的玩家之间<b>直连</b>：一台「中继服务器」只负责撮合与信令，
+真正的游戏数据走 P2P 打洞通路。房间的房主（Owner）不可转移，房主离开即销毁房间。</p>
+
+<table>
+  <thead><tr><th>组件</th><th>是什么</th><th>跑在哪</th></tr></thead>
+  <tbody>
+    <tr><td><code>server/</code> 中继</td><td>账号、房间、成员状态机、信令、版本门</td><td>Docker 容器 <code>mc-relay</code></td></tr>
+    <tr><td><code>panel/</code> 面板</td><td>PHP 管理面板 + 自带 nginx（端口 / 安全入口 / 域名 / SSL / 账号）</td><td>Docker 容器 <code>mc-panel</code></td></tr>
+    <tr><td><code>client/</code> 客户端</td><td>Windows 单文件 <code>CraftLink.exe</code>（Python + tkinter，免安装）</td><td>玩家自己的电脑</td></tr>
+    <tr><td>数据库</td><td>MySQL / MariaDB：账号、房间、面板设置</td><td>已有容器则<b>复用</b>，没有才由 compose 起</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <b>两套版本号，别混</b>
+  <div class="kv">
+    <div>服务端 / 客户端</div><div><code>3.9.x</code> 一条线；权威值是 <code>server/VERSION</code>，客户端必须<b>完全一致</b>才能连接</div>
+    <div>面板</div><div><code>2.x</code> 独立一条线（当前 <code>2.11.45</code>），与上面那条无关</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="prereq">2. 部署前置条件</h2>
+
+<table>
+  <thead><tr><th>项目</th><th>要求</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>服务器</td><td>Linux（x86_64 / arm64 均可），1 核 1G 起步</td><td>中继本身很轻；实际瓶颈是 Docker 与数据库</td></tr>
+    <tr><td>权限</td><td><code>root</code>（或 sudo）</td><td>安装器要写安装根目录、装 <code>mclink</code> 管理台</td></tr>
+    <tr><td>Docker</td><td>Docker Engine + Compose v2（<code>docker compose</code>）</td><td>安装器只做探测，不替你装 Docker</td></tr>
+    <tr><td>Python</td><td><code>python3</code>（3.10+；中继容器镜像用 3.12）</td><td>安装/迁移脚本用；只用标准库</td></tr>
+    <tr><td>数据库</td><td>可选：本机 Docker 里已有 MySQL / MariaDB</td><td>能读到就直接复用（建库建账号），读不到由 compose 起一个</td></tr>
+    <tr><td>端口</td><td>TCP <code>19100</code>（中继）、UDP <code>3478</code>/<code>3479</code>（STUN）</td><td>云安全组<b>必须</b>放行；面板端口见下一节</td></tr>
+    <tr><td>客户端</td><td>Windows 10/11 64 位</td><td>单文件 exe，免安装；Linux 也可以源码运行（需要 tkinter）</td></tr>
+  </tbody>
+</table>
+
+<div class="warn">
+  <b>不要写死路径</b>
+  安装根目录默认 <code>/opt/mc-link</code>，但这是<b>默认值</b>：安装器问你、或用
+  <code>--root</code> / <code>MCLINK_ROOT</code> 指定。下面所有命令里的
+  <code>&lt;安装根目录&gt;</code> 都换成你自己的。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="install">3. 一条命令安装（服务端）</h2>
+
+<ol class="steps">
+  <li>把交付包（<code>deploy/</code> 目录里的<b>全部内容</b>）上传到服务器上任意目录。</li>
+  <li>在该目录执行下面这一条命令，然后按提示回车：</li>
+</ol>
+
+<pre><code>bash install.sh</code></pre>
+
+<p>它一次做完这些事（<b>幂等</b>：重复跑不会换掉已有凭据、不会重建数据库、不会动已有数据）：</p>
+
+<table>
+  <thead><tr><th>步骤</th><th>做了什么</th></tr></thead>
+  <tbody>
+    <tr><td>1. 探测数据库</td><td>读本机 Docker 里已有的 MySQL / MariaDB，拿容器里的 root 凭据建库建账号；探测不到就提示手动配置，<b>不猜</b></td></tr>
+    <tr><td>2. 交互确认</td><td>安装根目录、面板监听端口、URL 安全入口</td></tr>
+    <tr><td>3. 写 <code>.env</code></td><td>权限 <code>600</code>；凭据是<b>本机随机生成</b>的（不是包里的示例值）</td></tr>
+    <tr><td>4. 起服务</td><td>构建并启动中继 + 面板容器，最后打印访问方式</td></tr>
+    <tr><td>5. 装管理台</td><td>把 <code>mclink</code> 命令软链到 <code>/usr/local/bin</code></td></tr>
+  </tbody>
+</table>
+
+<h3>3.1 非交互（自动化 / 重装）</h3>
+
+<pre><code>bash install.sh --yes \
+  --root /opt/mc-link \
+  --panel-port 19102 \
+  --secret-path my-panel-entry \
+  --db-container web-mysql80
+
+bash install.sh --help     # 全部参数</code></pre>
+
+<p>常用参数：<code>--root</code>（安装根目录）、<code>--panel-port</code>（面板端口）、
+<code>--secret-path</code>（安全入口，留空=随机）、<code>--db-container</code>（指定复用的数据库容器）、
+<code>--no-start</code>（只做准备、不起容器，排障用）、<code>--rotate-secrets</code>（强制换凭据）。</p>
+
+<h3>3.2 安装完先记住这些默认值</h3>
+
+<table>
+  <thead><tr><th>东西</th><th>默认</th><th>备注</th></tr></thead>
+  <tbody>
+    <tr><td>安装根目录</td><td><code>/opt/mc-link</code></td><td>可自定义；脚本一律从自身位置推导</td></tr>
+    <tr><td>中继协议端口</td><td>TCP <code>19100</code></td><td>安全组放行</td></tr>
+    <tr><td>STUN</td><td>UDP <code>3478</code> / <code>3479</code></td><td>打洞用；安全组放行</td></tr>
+    <tr><td>面板入口</td><td><code>http://&lt;服务器IP&gt;:19102/&lt;安全入口&gt;/</code></td><td>默认只绑 <code>127.0.0.1</code>；对外访问见第 4 节</td></tr>
+    <tr><td>本机急救入口</td><td><code>http://127.0.0.1:19103/</code></td><td>安全入口 / 域名 / 证书配错时从这里进去改回来</td></tr>
+    <tr><td>凭据文件</td><td><code>&lt;安装根目录&gt;/.env</code>（600）</td><td><b>不随发布包替换</b>，升级时原样保留</td></tr>
+  </tbody>
+</table>
+
+<h3>3.3 日常命令（SSH 管理台 <code>mclink</code>）</h3>
+
+<p>root-only、免密码；每个动作都写审计日志（<code>&lt;安装根目录&gt;/logs/mclink-console.log</code>）。</p>
+
+<table>
+  <thead><tr><th>命令</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td><code>mclink status</code></td><td>服务状态 + 最近日志</td></tr>
+    <tr><td><code>mclink show-secrets</code></td><td>显示 <code>.env</code> 里的凭据（root）</td></tr>
+    <tr><td><code>mclink reset-entry</code> / <code>mclink set-entry [PATH]</code></td><td>清空 / 重设面板 URL 安全入口（被关在门外时救命）</td></tr>
+    <tr><td><code>mclink unbind-domain</code></td><td>解绑域名绑定</td></tr>
+    <tr><td><code>mclink ssl-status</code> / <code>mclink ssl-off</code></td><td>看证书状态 / 关掉面板 HTTPS（证书不删）</td></tr>
+    <tr><td><code>mclink apply-network</code></td><td>把「面板设置」里的监听地址 / 端口 / SSL 落到宿主机（重建面板容器）</td></tr>
+    <tr><td><code>mclink rescue</code></td><td>打印本机急救入口地址</td></tr>
+    <tr><td><code>mclink reset-root-password</code> / <code>mclink reset-sessions</code></td><td>改账号密码 / 强制所有人重新登录面板</td></tr>
+    <tr><td><code>mclink audit [N]</code></td><td>看审计日志</td></tr>
+  </tbody>
+</table>
+
+<p>重建（改完配置、传完新文件之后跑）：<code>bash &lt;安装根目录&gt;/rebuild.sh</code>；
+只重建面板用 <code>bash &lt;安装根目录&gt;/rebuild.sh panel</code>（不断开玩家），
+只重建中继用 <code>... relay</code>（会断开在线玩家）。</p>
+
+<!-- ============================================================ -->
+<h2 id="first-config">4. 首次配置（端口 / 安全入口 / 管理员）</h2>
+
+<h3>4.1 面板端口与安全入口</h3>
+
+<table>
+  <thead><tr><th>做法</th><th>怎么做</th></tr></thead>
+  <tbody>
+    <tr><td>装的时候定</td><td><code>bash install.sh --panel-port 19102 --secret-path my-entry</code></td></tr>
+    <tr><td>装完改</td><td>面板 →「面板设置」→ 监听 IP / 端口 / URL 安全入口；保存后执行 <code>mclink apply-network</code></td></tr>
+    <tr><td>忘了安全入口</td><td>SSH 里 <code>mclink reset-entry</code>（清空）或 <code>mclink set-entry</code>（重设）</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <b>安全入口 ≠ 认证</b>
+  它只是把面板藏到一个随机路径上，<b>绕过它仍然要登录</b>。真正的访问控制是账号密码 + HTTPS。
+</div>
+
+<h3>4.2 让面板能从外面访问（二选一）</h3>
+
+<table>
+  <thead><tr><th>路子</th><th>步骤</th><th>适合</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><b>A. 面板自带 nginx 直听</b>（M4 起，推荐）</td>
+      <td>面板 →「面板设置」→ 监听 IP 改 <code>0.0.0.0</code>（或直接配域名 + SSL）；
+          执行 <code>mclink apply-network</code>；云安全组放行该端口</td>
+      <td>不想装别的面板；要用面板自带的证书 / ACME</td>
+    </tr>
+    <tr>
+      <td><b>B. 用 1Panel / 宝塔反代</b>（旧部署兼容）</td>
+      <td>建一个反向代理站点 → 目标 <code>http://127.0.0.1:19102</code>，
+          由它终结 HTTPS</td>
+      <td>已经有 1Panel，且想让它统一管证书</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="warn">
+  <b>两条路不要同时管域名</b>
+  走 B 的时候，<b>不要</b>在面板里再开「绑定域名」+「强制 HTTPS」——两边都判 Host 会互相打架。
+  要么域名绑定在面板（A），要么在 1Panel（B）。
+</div>
+
+<h3>4.3 管理员账号（第一次登录用）</h3>
+
+<ol class="steps">
+  <li>编辑 <code>&lt;安装根目录&gt;/server/docker-compose.yml</code>，把这一行填上你的管理员账号：
+      <pre><code>MCLINK_BOOTSTRAP_ADMIN: "admin:换成你的强密码"</code></pre></li>
+  <li>重建中继：<code>bash &lt;安装根目录&gt;/rebuild.sh relay</code>（中继启动时创建这个账号）。</li>
+  <li><b>创建成功后马上把那一行清回 <code>""</code></b>，再跑一次 <code>rebuild.sh relay</code> ——
+      别让明文密码留在 compose 文件里。</li>
+  <li>用这个账号登录面板 →「账号」页给朋友们建账号（客户端不提供注册）。</li>
+  <li>忘记密码：SSH 里 <code>mclink reset-root-password</code>。</li>
+</ol>
+
+<h3>4.4 面板里建议顺手做的三件事</h3>
+
+<ol class="steps">
+  <li>「面板设置」→ 绑定域名 + 上传证书（离线可用）或 Let's Encrypt（需域名解析 + 80 端口）。</li>
+  <li>「面板设置」→ 会话时长（默认 360 分钟）、未认证返回码。</li>
+  <li>「面板设置」→ 房间人数上限（默认 64，范围 2–64；改了立即生效，不用重启）。</li>
+</ol>
+
+<h3>4.5 装完自检</h3>
+
+<pre><code># 容器健康
+docker ps --filter name=mc-relay --filter name=mc-panel
+
+# 中继健康接口（本机）
+curl -s http://127.0.0.1:19100/health
+
+# 中继日志
+docker logs --tail 50 mc-relay
+
+# 重建 + 文件指纹自证（传过文件之后必跑）
+bash &lt;安装根目录&gt;/rebuild.sh</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="client">5. 客户端：怎么装、怎么填服务器地址</h2>
+
+<h3>5.1 拿到客户端</h3>
+
+<table>
+  <thead><tr><th>形态</th><th>怎么用</th></tr></thead>
+  <tbody>
+    <tr><td><code>CraftLink.exe</code>（单文件，免安装）</td><td>拷到 Windows 上双击即可；另有带黑窗的 <code>CraftLink-console.exe</code> 用于排错</td></tr>
+    <tr><td>Windows 安装包 <code>CraftLink-Setup.exe</code></td><td>若发布包带了安装器：双击安装，可自选安装目录与数据目录</td></tr>
+    <tr><td>源码运行（Linux / 开发）</td><td><code>python3 client/main.py</code>（需要 tkinter）</td></tr>
+  </tbody>
+</table>
+
+<h3>5.2 首次运行：填服务器地址</h3>
+
+<ol class="steps">
+  <li>双击运行。首次启动会弹一个<b>非模态</b>引导窗（不挡着你操作主界面）。</li>
+  <li>在「中转服务器」卡片里填两项：
+      <b>服务器地址</b> = 部署者给你的域名或 IP；<b>端口</b> = 部署时定的数字（默认 <code>19100</code>）。</li>
+  <li>点「测试服务器连接」。成功即被记住，下次自动带出；随时可改，改完立即生效。</li>
+  <li>登录 / 进房：账号由服务器管理员在面板「账号」页创建，客户端<b>不提供注册</b>。</li>
+</ol>
+
+<div class="note">
+  <b>这几件事是设计如此，不是 bug</b>
+  <div class="kv">
+    <div>默认没有服务器地址</div><div>客户端<b>不预置</b>任何域名/IP，必须手填</div>
+    <div>登录记忆默认不记</div><div>用户名/密码默认不写盘；你主动勾选才记</div>
+    <div>数据目录可改</div><div>配置/日志默认在 <code>%APPDATA%\CraftLink</code>（Linux：<code>~/.config/CraftLink</code>），绝不写进程序安装目录</div>
+  </div>
+</div>
+
+<h3>5.3 版本必须一致（连不上先看这条）</h3>
+
+<p>中继有一道<b>版本门</b>：客户端握手行里的 <code>ver=</code> 必须等于服务器的
+<code>server/VERSION</code>，否则服务端直接回
+<code>ERROR VERSION_MISMATCH server=… client=…</code>，客户端弹「需要更新」并停止重连。</p>
+
+<div class="danger">
+  <b>升级服务端就必须同时升级客户端</b>
+  只升一边 = 所有客户端都连不上（这是故意的：不同版本的协议约定可能不同，宁可明确拒绝，也不产生看不懂的怪现象）。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="upgrade">6. ★ 从 3.9.20 升级到本版本</h2>
+
+<p>下面用 <code>3.9.21</code> 代表「你要升到的那一版」；实际值看发布包里的
+<code>server/VERSION</code>。<code>3.9.20</code> 是你现在跑的版本。
+所有命令里的 <code>/opt/mc-link</code> 换成你自己的安装根目录。</p>
+
+<h3>6.1 升级前后各做什么（先看这张表）</h3>
+
+<table>
+  <thead><tr><th>阶段</th><th>动作</th><th>为什么</th></tr></thead>
+  <tbody>
+    <tr><td>升级前</td><td>备份数据库 + <code>.env</code> + <code>data/</code> + <code>config/</code></td><td>回滚的唯一依据</td></tr>
+    <tr><td>升级前</td><td>记下当前 <code>current</code> 指向的版本目录</td><td>回滚就是把它指回去</td></tr>
+    <tr><td>升级中</td><td>新版本解到 <code>releases/&lt;新版本&gt;/</code>，<b>不要</b>就地覆盖老目录</td><td>保留"上一版可回滚"</td></tr>
+    <tr><td>升级中</td><td><code>.env</code>、数据库、<code>data/</code>、<code>config/</code> <b>不搬家、不替换</b></td><td>它们是版本目录之外的状态</td></tr>
+    <tr><td>升级后</td><td>切 <code>current</code> 软链 → 重建容器</td><td>原子切换；出问题一条命令切回</td></tr>
+    <tr><td>升级后</td><td>把面板从 1Panel 反代切到自带 nginx（如果要切）：放行新端口、下线旧反代</td><td>见 6.4</td></tr>
+    <tr><td>升级后</td><td>客户端升到<b>同一版本</b></td><td>版本门；否则全员连不上</td></tr>
+    <tr><td>升级后</td><td>验收：健康接口 / 面板登录 / 真客户端进房</td><td>见 6.6</td></tr>
+  </tbody>
+</table>
+
+<h3>6.2 备份（先做，5 分钟）</h3>
+
+<pre><code>ROOT=/opt/mc-link
+TS=$(date +%Y%m%d-%H%M%S)
+BK="$ROOT/backups/$TS"
+install -d -m 700 "$BK"
+
+# 1) 数据库（库名/账号默认 mclink；用 .env 里的密码）
+set -a; . "$ROOT/.env"; set +a
+docker exec "$(docker ps --format '{{.Names}}' | grep -iE 'mysql|mariadb' | head -1)" \
+  mysqldump -u "${MCLINK_DB_USER:-mclink}" -p"$MCLINK_DB_PASSWORD" \
+  "${MCLINK_DB_NAME:-mclink}" &gt; "$BK/mclink.sql"
+
+# 2) 凭据与运行期状态（升级不替换它们，但要有备份）
+cp -a "$ROOT/.env" "$BK/.env"
+tar -czf "$BK/data-config.tar.gz" -C "$ROOT" data config 2&gt;/dev/null || true
+
+# 3) 记下当前版本（回滚要用）
+readlink -f "$ROOT/current" | tee "$BK/current-before.txt"
+ls -l "$ROOT/releases" | tee -a "$BK/current-before.txt"</code></pre>
+
+<div class="note">
+  <b>备份里有什么，别外传</b>
+  <code>mclink.sql</code> 有全部账号数据，<code>.env</code> 有数据库密码与管理 API token。
+  权限保持 <code>600/700</code>，不要放进网盘或工单。
+</div>
+
+<h3>6.3 原地升级（release 目录 + <code>current</code> 软链）</h3>
+
+<pre><code>ROOT=/opt/mc-link
+NEW=3.9.21          # 换成发布包里的 server/VERSION
+OLD=$(basename "$(readlink -f "$ROOT/current")")
+
+# ① 解到新版本目录（保留老目录 = 保留回滚能力）
+install -d -m 755 "$ROOT/releases/$NEW"
+tar -xzf release-$NEW.tar.gz -C "$ROOT/releases/$NEW"      # 按发布包实际结构调整 --strip-components
+
+# ② 把"版本目录之外的状态"接给新版本：
+#    .env / data/ / config/ 本来就在 $ROOT 下，不在 releases/<版本>/ 里，
+#    所以这里【什么都不用拷】—— 这正是它们能在升级中活下来的原因。
+#    如果你的部署把 .env 放在 releases/<版本>/ 里，请先把它移到 $ROOT/.env。
+
+# ③ 原子切换（先建临时软链再 mv，避免"切到一半"）
+ln -sfn "$ROOT/releases/$NEW" "$ROOT/current.new" &amp;&amp; mv -Tf "$ROOT/current.new" "$ROOT/current"
+
+# ④ 用稳定入口重建并拉起（内部指向 current）
+bash "$ROOT/rebuild.sh"</code></pre>
+
+<div class="warn">
+  <b>你的部署里还没有 <code>releases/</code> + <code>current</code>？</b>
+  那说明它是"整包覆盖"式部署（<code>deploy/</code> 直接铺在 <code>$ROOT</code> 下）。
+  同一个流程改成两步即可，回滚也简单：
+  <ol>
+    <li><b>升级</b>：先 <code>cp -a "$ROOT" "$ROOT.bak-$TS"</code>（或只备份将被覆盖的
+        <code>server/ panel/ scripts/ tests/ *.sh *.yml</code>），再把新包内容覆盖进 <code>$ROOT</code>，
+        最后 <code>bash "$ROOT/rebuild.sh"</code>；</li>
+    <li><b>回滚</b>：把备份覆盖回去 + <code>bash "$ROOT/rebuild.sh"</code>。</li>
+  </ol>
+  两种方式的共同点：<b><code>.env</code>、数据库、<code>data/</code>、<code>config/</code> 都不动。</b>
+</div>
+
+<h3>6.4 数据库与 <code>.env</code> 迁移</h3>
+
+<table>
+  <thead><tr><th>东西</th><th>怎么处理</th><th>注意</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>数据库数据</td>
+      <td><b>不迁移、不导入</b>：继续用原来那个 MySQL/MariaDB 容器和 <code>mclink</code> 库</td>
+      <td>新版本的表结构变化都是 <code>CREATE TABLE IF NOT EXISTS</code> 式的懒建，启动时自动补齐</td>
+    </tr>
+    <tr>
+      <td>连库凭据 <code>.env</code></td>
+      <td>保留原文件（600）；新版本的 compose 读同一份</td>
+      <td><b>不要</b>用发布包里的 <code>.env.example</code> 覆盖它；也<b>不要</b>在升级时跑 <code>--rotate-secrets</code>（那会换密码，得同步改库）</td>
+    </tr>
+    <tr>
+      <td>面板设置</td>
+      <td>不用动：DB 表 <code>panel_settings</code> 是主存储，<code>config/panel-settings.json</code> 是备份</td>
+      <td>域名绑定 / 端口 / 安全入口 / SSL 设置都保留</td>
+    </tr>
+    <tr>
+      <td>证书与上传</td>
+      <td>不用动：<code>data/panel-certs/</code>、<code>data/panel-uploads/</code></td>
+      <td>目录属主需要时按发布说明 <code>chown 65534:65534</code></td>
+    </tr>
+    <tr>
+      <td>compose 里的手改</td>
+      <td><b>会</b>被新包覆盖（含第一次填的 <code>MCLINK_BOOTSTRAP_ADMIN</code>、硬编码的凭据行）</td>
+      <td>升级后按第 4.3 节重新确认；密码已经在库里的不用再设</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>6.5 面板：从「1Panel 反代」切到「自带 nginx」</h3>
+
+<p>3.9.20 之前的常见形态是：1Panel 反代 <code>http://127.0.0.1:19102</code>，由 1Panel 终结 HTTPS。
+新版本的面板自带 nginx，可以自己终结 HTTPS，不再依赖 1Panel。</p>
+
+<h4>要做的事（按顺序）</h4>
+
+<ol class="steps">
+  <li><b>先决定谁终结 TLS</b>：继续让 1Panel 管（那就什么都不用切，保持旧形态即可）；
+      或者改成面板自带 nginx（下面继续）。</li>
+  <li>面板 →「面板设置」→ 绑定域名 + 证书：
+      <ul>
+        <li>上传证书：<code>fullchain.pem</code> + <code>privkey.pem</code>（离线可用）；</li>
+        <li>或 Let's Encrypt 自动申请 / 续期（需域名解析 + 80 端口能从公网进来）。</li>
+      </ul></li>
+  <li>面板 →「面板设置」→ 监听 IP 改成 <code>0.0.0.0</code>（或按需），保存。</li>
+  <li>SSH 执行 <code>mclink apply-network</code>（等价于 <code>bash scripts/panel-apply.sh</code>）——
+      它会把 80 / 443 的映射加上并重建面板容器。</li>
+  <li><b>云安全组 / 防火墙</b>：
+      <table>
+        <thead><tr><th>端口</th><th>动作</th><th>为什么</th></tr></thead>
+        <tbody>
+          <tr><td>TCP 80</td><td>放行</td><td>ACME 校验 + HTTP→HTTPS 跳转（开了 SSL 才需要）</td></tr>
+          <tr><td>TCP 443</td><td>放行</td><td>面板 HTTPS 直听</td></tr>
+          <tr><td>TCP 19102</td><td>可关闭（不再对公网）</td><td>改由 443 进来；本机调试仍可用</td></tr>
+          <tr><td>TCP 19100 / UDP 3478-3479</td><td>保持放行</td><td>中继与 STUN，和面板无关</td></tr>
+        </tbody>
+      </table></li>
+  <li><b>下线 1Panel 那条反代</b>：1Panel →「网站」→ 停用/删除指向 19102 的代理站点，
+      并关掉它的"强制 HTTPS"。</li>
+  <li>验收：<code>curl -sI https://你的域名/</code> 返回 200；
+      <code>curl -sI http://你的域名/</code> 301 到 HTTPS。</li>
+</ol>
+
+<div class="warn">
+  <b>切换时最容易出的两个错</b>
+  <ul>
+    <li>1Panel 的反代和面板自带的 nginx <b>同时</b>抢 80/443 —— 容器启动会明确报错（不会静默顶掉），看到端口占用就先去停一边；</li>
+    <li>两边都做域名绑定 / 强制 HTTPS —— 请求的 Host 对不上，会看到 404 或无限跳转。只留一边。</li>
+  </ul>
+  进不去的时候：SSH 里 <code>mclink rescue</code> 拿到 <code>http://127.0.0.1:19103/</code>，
+  那个入口不判安全入口 / 不判域名 / 不跳 HTTPS。
+</div>
+
+<h3>6.6 升级后验收清单</h3>
+
+<table>
+  <thead><tr><th>#</th><th>检查</th><th>期望</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><code>docker ps</code></td><td><code>mc-relay</code> / <code>mc-panel</code> 都是 Up（healthy）</td></tr>
+    <tr><td>2</td><td><code>curl -s http://127.0.0.1:19100/health</code></td><td>返回 JSON，<code>relay_version</code> = 新版本号</td></tr>
+    <tr><td>3</td><td>面板左上角</td><td>显示的中继版本 = 新版本号</td></tr>
+    <tr><td>4</td><td>面板登录 + 账号页</td><td>老账号还能登录，房间/账号数据都在</td></tr>
+    <tr><td>5</td><td>用<b>新版本客户端</b>进房</td><td>能建房、能进房、能开始连接</td></tr>
+    <tr><td>6</td><td>用<b>旧版本客户端</b>连</td><td>预期被拒：<code>ERROR VERSION_MISMATCH</code>（提示用户升级）</td></tr>
+    <tr><td>7</td><td><code>bash &lt;安装根目录&gt;/rebuild.sh</code></td><td>文件指纹核对通过（没有"对不上"的文件）</td></tr>
+  </tbody>
+</table>
+
+<h3>6.7 回滚（出问题 3 分钟内切回）</h3>
+
+<pre><code>ROOT=/opt/mc-link
+
+# ① 切回旧版本目录（软链是原子操作，不会"切一半"）
+OLD=$(cat "$ROOT/backups/&lt;TS&gt;/current-before.txt" | head -1)
+ln -sfn "$OLD" "$ROOT/current.new" &amp;&amp; mv -Tf "$ROOT/current.new" "$ROOT/current"
+
+# ② 拉起旧版本
+bash "$ROOT/rebuild.sh"
+
+# ③ 只有"数据层也动过"才需要恢复数据库（正常升级不需要）
+#    docker exec -i &lt;db容器&gt; mysql -u mclink -p"$MCLINK_DB_PASSWORD" mclink &lt; "$ROOT/backups/&lt;TS&gt;/mclink.sql"
+
+# ④ 把面板入口切回旧形态（如果这次动过 1Panel 反代 / 证书，按 6.5 反向做一遍）</code></pre>
+
+<div class="ok">
+  <b>回滚为什么这么快</b>
+  数据库、<code>.env</code>、<code>data/</code>、<code>config/</code> 都在版本目录之外，
+  升级过程没有替换它们 —— 所以"回滚"通常只是把 <code>current</code> 指回去再重建。
+</div>
+
+<h3>6.8 兼容性边界（哪些保留、哪些必须重设）</h3>
+
+<table>
+  <thead><tr><th>类别</th><th>项目</th><th>升级后</th></tr></thead>
+  <tbody>
+    <tr><td rowspan="7"><b>会被保留</b></td><td>MySQL 数据（账号、房间、面板设置表）</td><td>原样保留</td></tr>
+    <tr><td><code>.env</code>（数据库密码、管理 API token）</td><td>原样保留（600）</td></tr>
+    <tr><td><code>panel/config.php</code></td><td>原样保留（发布包不会覆盖它）</td></tr>
+    <tr><td><code>data/panel-uploads/</code>（logo 等）</td><td>原样保留</td></tr>
+    <tr><td><code>data/panel-certs/</code>（证书与私钥）</td><td>原样保留</td></tr>
+    <tr><td><code>config/panel-settings.json</code>（设置备份）</td><td>原样保留</td></tr>
+    <tr><td>客户端数据目录（记住的服务器地址）</td><td>原样保留，不用重填</td></tr>
+    <tr><td rowspan="6"><b>会被覆盖 / 必须重做</b></td>
+        <td><code>server/ panel/ scripts/ tests/ *.sh *.yml</code></td><td>被新包覆盖（这正是升级）</td></tr>
+    <tr><td>compose 里的手改（<code>MCLINK_BOOTSTRAP_ADMIN</code>、硬编码凭据行）</td><td><b>丢</b>；账号已在库里则不用重建，凭据按新的 <code>.env</code>/compose 对齐</td></tr>
+    <tr><td>系统层端口放行（安全组 / 防火墙）</td><td><b>要自己加</b>：80/443（自带 nginx）、19100、UDP 3478-3479</td></tr>
+    <tr><td>1Panel 反代站点</td><td>切到自带 nginx 时<b>要下线</b>，否则抢 80/443</td></tr>
+    <tr><td>客户端</td><td><b>必须</b>升到同一版本（版本门）</td></tr>
+    <tr><td>本机生成的 <code>panel/docker-compose.panel-ssl.yml</code></td><td>不随包发布；执行 <code>mclink apply-network</code> 会按当前设置重新生成</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="dev">7. 面向未来开发者</h2>
+
+<h3>7.1 目录结构</h3>
+
+<table>
+  <thead><tr><th>路径</th><th>是什么</th></tr></thead>
+  <tbody>
+    <tr><td><code>server/</code></td><td>中继：<code>relay_server.py</code>（唯一握手解析点 + 版本门）、<code>room_members.py</code>、<code>admin_api.py</code>、<code>db_schema.py</code>、<code>relay_config.py</code></td></tr>
+    <tr><td><code>panel/</code></td><td>PHP 面板：<code>web/</code>（页面与视图）、<code>lib/</code>（设置注册表、SSL、审计）、<code>nginx/templates/</code>（渲染站点配置）</td></tr>
+    <tr><td><code>client/</code></td><td>客户端：<code>mclink/core/</code>（协议/打洞）、<code>mclink/gui/</code>（tkinter 界面）、<code>mclink/config/</code>（配置与品牌）、<code>main.py</code> 入口</td></tr>
+    <tr><td><code>deploy/</code></td><td><b>交付包</b>：服务器上就是这份目录结构（由 <code>scripts/sync-deploy.py</code> 生成；打包阶段的事）</td></tr>
+    <tr><td><code>tests/</code></td><td>回归网：<code>run_all.py</code>（随包交付）、<code>run_all_full.py</code>（工作区重网）、各专项套件</td></tr>
+    <tr><td><code>scripts/</code></td><td><code>make_build.py</code>（清单/指纹）、<code>check_deploy.py</code>（门禁）、<code>bump-version.py</code>、<code>sync-deploy.py</code>、<code>install_db.py</code>、<code>mclink-console.sh</code> 等</td></tr>
+    <tr><td><code>docs/</code></td><td>设计与运维文档：<code>OPENSOURCE-PLAN.md</code>（口径基线）、<code>PROTOCOL.md</code>、<code>PANEL-SETTINGS.md</code>、<code>M4-SSL-DOMAIN.md</code>、<code>CLIENT-BRANDING.md</code>…</td></tr>
+    <tr><td><code>optional/</code></td><td><b>不随主交付发布</b>的留档：早期官网 + 下载哈希校验（见 7.4）</td></tr>
+    <tr><td><code>installer/</code></td><td>Windows 安装器（Inno Setup，M7 产物；构建说明见 <code>docs/INSTALLER.md</code>）</td></tr>
+  </tbody>
+</table>
+
+<h3>7.2 门禁与回归</h3>
+
+<pre><code># 回归网（随包交付，纯标准库、不需要网络）
+XDG_CONFIG_HOME=$PWD/.testcfg python3 tests/run_all.py
+
+# 面板静态门禁（HTML/PHP/JS 契约，不需要数据库）
+python3 tests/panel_static_test.py
+
+# 挑和改动相关的专项套件（自己起中继、用完自己收）
+XDG_CONFIG_HOME=$PWD/.testcfg python3 tests/v2_control_test.py
+XDG_CONFIG_HOME=$PWD/.testcfg python3 tests/room_settings_test.py
+XDG_CONFIG_HOME=$PWD/.testcfg python3 tests/host_offline_owner_test.py
+XDG_CONFIG_HOME=$PWD/.testcfg python3 tests/version_gate_test.py</code></pre>
+
+<p><b>发版 / 打包门禁顺序固定，不要跳步：</b></p>
+
+<pre><code>python3 scripts/make_build.py --clean     # ① 清本地产物 + 重新生成 BUILD.txt / README.txt
+python3 scripts/check_deploy.py           # ② 门禁 8 项（版本/凭据/指纹/编译/e2e/回归…）
+python3 scripts/check_deploy.py --stamp   # ③ 全绿之后才打"这一版已发"的戳
+python3 scripts/bump-version.py &lt;x.y.z&gt;   # ④ 最后才升版本号（唯一来源：客户端 APP_VERSION）</code></pre>
+
+<div class="note">
+  <b>为什么是这个顺序</b>
+  <code>check_deploy.py</code> 校验的是"<code>BUILD.txt</code> 和源码树是否一致"，
+  所以生成清单必须在门禁之前；<code>--stamp</code> 只能在全绿之后（它记录"上一版已发出"）；
+  升版本号会改两个版本文件，改完要重新 ①→②→③ 走一遍。
+</div>
+
+<h3>7.3 品牌定制（<code>branding.json</code>）</h3>
+
+<p>客户端启动时按顺序找<b>第一个存在</b>的 <code>branding.json</code>：
+<code>$MCLINK_BRANDING_FILE</code> → <b>程序目录旁</b>（冻结 exe = exe 所在目录；源码运行 = <code>client/</code>）
+→ 打包进 exe 的那份。模板见 <code>client/branding.json.example</code>。</p>
+
+<table>
+  <thead><tr><th>字段</th><th>类型</th><th>默认</th><th>作用</th></tr></thead>
+  <tbody>
+    <tr><td><code>app_name</code></td><td>字符串</td><td><code>CraftLink</code></td><td>窗口标题、页眉、关于页、日志首行</td></tr>
+    <tr><td><code>logo_file</code></td><td>字符串</td><td>空（内置图标）</td><td>相对 = 相对 <code>branding.json</code>；绝对 = 原样</td></tr>
+    <tr><td><code>default_server_host</code></td><td>字符串</td><td><b>空</b></td><td>新用户地址预填值、「恢复默认」的目标</td></tr>
+    <tr><td><code>default_server_port</code></td><td>整数</td><td><code>0</code>（未设置）</td><td>同上，只接受 1–65535</td></tr>
+    <tr><td><code>update_url</code></td><td>字符串</td><td>空</td><td>版本不一致时「需要更新」弹窗里的下载页；空则只提示"向管理员索取"</td></tr>
+  </tbody>
+</table>
+
+<p>未知字段被忽略；任何字段缺失都<b>逐项回退</b>，文件坏了只警告、不阻塞启动。
+改品牌<b>不用重新打包</b>：把 <code>branding.json</code> 放到 exe 旁边即可。</p>
+
+<h3>7.4 可选组件（<code>optional/</code>）</h3>
+
+<table>
+  <thead><tr><th>目录</th><th>是什么</th><th>官方态度</th></tr></thead>
+  <tbody>
+    <tr><td><code>optional/site/</code></td><td>早期官网（纯静态 HTML/CSS/JS + nginx 站点配置）</td><td><b>不再提供</b>；想搭官网自行用宝塔 / 1Panel 的静态站点功能，页面可参考这里的实现</td></tr>
+    <tr><td><code>optional/checksum/</code></td><td>下载哈希校验（发布前比对页面 SHA-256 / 字节数 vs 真实文件）</td><td><b>不再提供</b>；只对"自己发 exe 的官网"有意义</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <b>它不随包发布</b>
+  <code>scripts/make_build.py</code> 把整个 <code>optional/</code> 排除在
+  <code>BUILD.txt</code> / <code>README.txt</code> 之外：服务器上不会有它。
+  主交付的脚本/文档<b>不许</b>引用它下面的路径（包里没有 = 死链）。
+  交付包的完整性由另一套机制保证，仍然随包走：<code>sha256sum -c BUILD.txt</code>。
+</div>
+
+<h3>7.5 改代码前必读</h3>
+
+<table>
+  <thead><tr><th>文档</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td><code>CONTRIBUTING.md</code></td><td>开发/提交流程、回归网、门禁顺序、十条硬规则</td></tr>
+    <tr><td><code>docs/OPENSOURCE-PLAN.md</code></td><td>开源化改造的<b>锁定口径</b>（D1–D14）与进度；改口径要先改它</td></tr>
+    <tr><td><code>docs/PROTOCOL.md</code></td><td>协议字段、握手行、错误码（含版本门）</td></tr>
+    <tr><td><code>docs/PANEL-SETTINGS.md</code></td><td>面板设置注册表、权限模型、DB+JSON 双写</td></tr>
+    <tr><td><code>docs/M4-SSL-DOMAIN.md</code></td><td>面板自带 nginx、证书、域名绑定、急救入口</td></tr>
+    <tr><td><code>docs/CLIENT-BRANDING.md</code></td><td>品牌文件、用户数据目录、首次运行引导</td></tr>
+    <tr><td><code>SECURITY.md</code></td><td>漏洞报告渠道与测试边界</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="faq">8. 常见问题速查</h2>
+
+<table>
+  <thead><tr><th>现象</th><th>多半是</th><th>怎么办</th></tr></thead>
+  <tbody>
+    <tr><td>客户端提示"需要更新" / 服务端日志 <code>VERSION_MISMATCH</code></td><td>客户端与服务端版本不一致</td><td>把客户端升到与 <code>server/VERSION</code> 相同的版本</td></tr>
+    <tr><td>面板打不开（404 / 空白）</td><td>安全入口不对，或反代前缀被剥掉了</td><td><code>mclink reset-entry</code>；或 <code>mclink rescue</code> 用本机急救入口</td></tr>
+    <tr><td>面板跳转死循环 / 404</td><td>1Panel 反代与面板自带 nginx 同时管域名</td><td>只留一边（见 4.2 / 6.5）</td></tr>
+    <tr><td>容器起不来，报端口占用</td><td>80/443 被别的站点占着</td><td>停掉冲突站点，或改面板监听端口</td></tr>
+    <tr><td>玩家连不上中继</td><td>安全组没放行 TCP 19100</td><td>放行；<code>curl -s http://&lt;IP&gt;:19100/health</code> 自测</td></tr>
+    <tr><td>能进房但打不通 P2P</td><td>UDP 3478/3479 没放行（NAT 类型差也会）</td><td>放行 UDP；看客户端日志里的 NAT 结论</td></tr>
+    <tr><td>改完文件没生效</td><td>镜像用了构建缓存</td><td><code>bash &lt;安装根目录&gt;/rebuild.sh</code>（它会先删镜像再构建）</td></tr>
+    <tr><td>数据库连不上</td><td><code>.env</code> 与 compose 里的值不一致</td><td>以 <code>.env</code> 为准对齐；<code>mclink show-secrets</code> 查看</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="license">9. 许可证与安全</h2>
+
+<div class="kv">
+  <div>许可证</div><div><b>GPLv3</b> —— 全文见仓库根 <code>LICENSE</code>（可自由使用、修改、再分发；衍生作品须同样以 GPLv3 开源）</div>
+  <div>贡献指南</div><div><code>CONTRIBUTING.md</code></div>
+  <div>安全策略</div><div><code>SECURITY.md</code>（漏洞请走私密渠道，不要开公开 issue）</div>
+  <div>行为准则</div><div><code>CODE_OF_CONDUCT.md</code></div>
+  <div>已知风险</div><div><code>SECURITY-NOTICE.md</code>（本版本线的凭据硬编码模式；<b>开源发布前必须轮换并改回 <code>.env</code> 引用</b>）</div>
+</div>
+
+<footer>
+  <p>CraftLink（方块联机）· 部署与开发说明书 · 本页自包含：样式内联、无外部字体/图片/CDN、无 JavaScript。</p>
+  <p>文中出现的域名 / IP / 路径均为示例占位；真实凭据只存在于你部署机上的 <code>.env</code> 与面板设置里。</p>
+</footer>
+
+</div>
+</body>
+</html>

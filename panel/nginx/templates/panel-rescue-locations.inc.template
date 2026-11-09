@@ -1,0 +1,13 @@
+# 急救入口的路径规则
+#
+# [!] 这里**没有**安全入口前缀、**没有**域名判定、**不做** HTTPS 跳转 ——
+#     这是刻意的：面板被自己配错（安全入口写错 / 域名绑错 / 证书坏了）时，
+#     本机还能从 127.0.0.1:<急救端口> 进去，在设置页里改回来。
+#
+# 公网到不了这里：compose 只把急救端口发布到宿主机回环地址
+# （127.0.0.1:{{RESCUE_PORT}}:{{RESCUE_PORT}}）。
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+
+include {{SERVER_DIR}}/panel-backend.inc;

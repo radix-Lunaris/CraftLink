@@ -1,0 +1,35 @@
+# ============================================================
+#  PHP 后端 + 静态文件 + 敏感路径（HTTP / HTTPS / 急救三份共用）
+# ============================================================
+
+# ---- PHP ----
+location ~ \.php$ {
+    try_files $uri =404;
+
+{{PHP_BACKEND}}
+    # 关房间要等：面板最坏 40 秒（通知客户端 → 等 → 强断 → 清残留行），
+    # 60 秒留足余量，让面板先给出可读的结果，而不是 nginx 先甩一个 504。
+    fastcgi_read_timeout 60s;
+    proxy_read_timeout 60s;
+}
+
+# ---- 静态文件 ----
+location /assets/ {
+    expires 1h;
+    access_log off;
+}
+
+# ---- 安全：敏感路径一律拒绝 ----
+# lib/ 在 web 根目录之外（/var/www/lib），本来就访问不到；这里是第二层保险。
+location ~ /(config\.php|lib/|\.git) {
+    deny all;
+}
+
+location ~ /\. {
+    deny all;
+}
+
+# 任何试图用 ../ 跳出根目录的请求
+location ~ \.\. {
+    deny all;
+}

@@ -1,0 +1,9 @@
+# force_https 打开时的 HTTP 服务
+#
+#   * ACME（Let's Encrypt HTTP-01）校验必须走明文 HTTP，所以先放行它；
+#   * 其余请求一律 301 到 HTTPS —— 跳转地址里带上宿主机实际的 HTTPS 端口
+#     （{{HTTPS_PORT_SUFFIX}} 为空 = 443；不是 443 时会写成 :端口）。
+{{ACME_BLOCK}}
+location / {
+    return 301 https://$host{{HTTPS_PORT_SUFFIX}}$request_uri;
+}

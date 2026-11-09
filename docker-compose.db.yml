@@ -1,0 +1,56 @@
+# ============================================================
+#  CraftLink 服务端 MySQL（可选，M5 安装器用）
+# ============================================================
+#
+#  这个文件**只在全新机器上**用：安装器探测不到现成的 MySQL/MariaDB 容器时，
+#  才会用它起一个（有现成的就直接复用，绝不新建 —— D4）。
+#
+#  正常不用手工执行；`bash install.sh` 会带着环境变量调它：
+#
+#      MCLINK_DB_ROOT_PASSWORD=... docker compose -f docker-compose.db.yml up -d
+#
+#  几条设计上的选择：
+#    * root 密码**没有默认值**（`:?` 直接拒绝启动）—— 绝不内置凭据；
+#    * 不发布 3306 到宿主机：中继/面板通过 Docker 网络用**容器名**连它，
+#      公网少一个可被扫的端口；
+#    * 数据放在具名卷里（不是 ./data），重装 / 升级 / 重建容器都不丢。
+# ============================================================
+
+services:
+  mclink-db:
+    image: "${MCLINK_DB_IMAGE:-mysql:8.0}"
+    container_name: "${MCLINK_DB_CONTAINER:-mclink-db}"
+
+    restart: unless-stopped
+
+    networks:
+      - mclink
+
+    environment:
+      TZ: "${TZ:-Asia/Shanghai}"
+      # 必须由安装器（或你自己）提供 —— 没有默认值，缺失就拒绝启动。
+      MYSQL_ROOT_PASSWORD: "${MCLINK_DB_ROOT_PASSWORD:?安装器会生成一个；手工起容器时请显式提供 MCLINK_DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${MCLINK_DB_NAME:-mclink}"
+
+    # 中文房间名/用户名要存得下：和中继的建表语句保持同一套字符集。
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_general_ci"
+
+    volumes:
+      - "mclink-db-data:/var/lib/mysql"
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+networks:
+  mclink:
+    name: "${MCLINK_DOCKER_NETWORK:-mclink-net}"
+
+volumes:
+  mclink-db-data:
+    name: "${MCLINK_DB_VOLUME:-mclink-db-data}"
