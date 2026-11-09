@@ -1,6 +1,6 @@
 # 工作区与 VPS 上传说明
 
-项目名称为 CraftLink，远端为 https://github.com/radix-Lunaris/CraftLink ，当前开发在 dev。本地最新为 v5.1.5 连接恢复修复候选，尚未推送，未标成正式发行。已发布的 v5.1.3 双平台 CI 已通过；新版验证见 V5.1.5-VALIDATION.json。
+CraftLink v5.1.5 已于 2026-11-09 获用户验收。发行源码在 master，开发历史在 dev。自动验证记录见 [V5.1.5-VALIDATION.json](V5.1.5-VALIDATION.json)，该记录保留候选阶段的原始状态。
 
 ## 本地工作区
 
@@ -24,13 +24,13 @@
 
 ## 上传哪些内容
 
-使用本地 `CraftLink/dist/v5.1.5Full/` 完整候选目录或同目录旁的候选压缩包，保持相对路径上传到现有 VPS 部署根目录（例如 `/opt/mc-link`）。该部署路径不必改名。
+解压 [v5.1.5 发行页](https://github.com/radix-Lunaris/CraftLink/releases/tag/v5.1.5) 的 `CraftLink-v5.1.5-full.tar.gz`，保持相对路径上传到现有 VPS 部署根目录（例如 `/opt/mc-link`）。该部署路径不必改名。
 
-最稳妥的做法是上传候选目录全部内容，只跳过根目录的 `CraftLink.exe`、`CraftLink-console.exe`；EXE 在玩家电脑运行。保留 `server/`、`panel/`、`scripts/`、`docs/`、`images/`、其余源码及根目录脚本、requirements 和 BUILD.txt，便于完整校验。使用 `--prebuilt-panel` 时，`images/` 的离线镜像及 `docs/panel-image.json`、`docs/panel-image.sha256` 必须配套上传。
+最稳妥的做法是上传发行包目录全部内容，只跳过根目录的 `CraftLink.exe`、`CraftLink-console.exe`；EXE 在玩家电脑运行。保留 `server/`、`panel/`、`scripts/`、`docs/`、`images/`、其余源码及根目录脚本、requirements 和 BUILD.txt，便于完整校验。使用 `--prebuilt-panel` 时，`images/` 的离线镜像及 `docs/panel-image.json`、`docs/panel-image.sha256` 必须配套上传。
 
 不要从 Git 源码目录整包上传，也不要上传 `.git/`、私有目录、密码表、日志、旧备份或自用地址文件。Git 不保存 EXE、镜像和交付压缩包，因此单独从 GitHub 下载源码不等于完整的离线部署包。
 
-保留 VPS 原有 `.env`、`panel/config.php`、`panel/config.local.php` 和现有持久数据、卷；不使用 `.env.example` 覆盖真实 `.env`。候选包本来就不包含这些私有文件。
+保留 VPS 原有 `.env`、`panel/config.php`、`panel/config.local.php` 和现有持久数据、卷；不使用 `.env.example` 覆盖真实 `.env`。发行包就不包含这些私有文件。
 
 ## 原部署尚未完成凭据外置时
 
@@ -42,7 +42,7 @@ python3 /tmp/craftlink-migration/migrate_config.py --from-dir /opt/mc-link --out
 
 工具从旧部署保值导出，发现冲突就停止；不要手动填占位密码或运行轮换脚本。已经完成共享 `.env` 迁移的部署保留现有文件，检查一致即可。
 
-然后上传候选目录并执行：
+然后上传发行包目录并执行：
 
 ```bash
 cd /opt/mc-link
@@ -52,4 +52,4 @@ bash rebuild.sh all --prebuilt-panel
 
 预检失败不要继续重建。重建中继会断开正在使用的连接，需安排合适时间。中继与双方客户端版本须一致为 5.1.5。面板代码未改，随包沿用已验证的 5.1.1 面板镜像，文件名和哈希保持真实版本。
 
-若 VPS 已是同版本、服务文件未变化，不必重复重建。从旧版更新到 5.1.5 时，严格版本校验要求同步中继版本；本版包含中继与客户端连接生命周期修复。正式使用前仍需 VPS 与真实公网验收。
+若 VPS 已是同版本、服务文件未变化，不必重复重建。从旧版更新到 5.1.5 时，严格版本校验要求同步中继版本；本版包含中继与客户端连接生命周期修复。本地部署时按上述流程预检和重建。

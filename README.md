@@ -2,7 +2,7 @@
 
 通用 TCP 端口联机工具，包含桌面客户端、房间管理、中继和管理面板。Minecraft 是使用场景之一，隧道建立不依赖游戏运行。
 
-当前本地开发候选 **v5.1.5**：修复连接清理、Host/Player 临时断线恢复及错误在线状态。尚未完成用户 VPS 与真实游戏验收，见 [修复方案](docs/V5.1.5-RECOVERY-PLAN.md)。自有地址继续使用 [私有配置](docs/V5.1.3-PRIVACY.md)。
+当前发行版 **v5.1.5** 已通过用户验收，修复连接清理、Host/Player 临时断线恢复及错误在线状态。Windows 客户端、部署包及校验文件见 [GitHub Releases](https://github.com/radix-Lunaris/CraftLink/releases)。自有地址继续使用 [私有配置](docs/V5.1.3-PRIVACY.md)。
 
 ## 开发
 
@@ -23,7 +23,7 @@ python -B scripts/audit_ui.py
 
 ```bash
 python3 /临时工具目录/migrate_config.py --from-dir /opt/mc-link --output /opt/mc-link/.env
-# 上传候选包，保留 .env 和现有 PHP 本地配置
+# 上传发行包，保留 .env 和现有 PHP 本地配置
 python3 /opt/mc-link/scripts/deploy_config.py
 bash /opt/mc-link/rebuild.sh all --prebuilt-panel
 ```
