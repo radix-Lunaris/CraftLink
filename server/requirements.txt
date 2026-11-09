@@ -1,0 +1,17 @@
+# MC-Link relay server -- Python dependencies.
+#
+# The frozen Minecraft data path needs NOTHING from this file: it is pure
+# standard library asyncio. These two packages exist only for the V2 account
+# system and the web panel data mirror.
+#
+#   PyMySQL       pure Python MySQL client. Used from a worker thread so a slow
+#                 query can never block the event loop or a data tunnel.
+#   cryptography  required by MySQL 8.0's default caching_sha2_password
+#                 authentication over a non-TLS connection. Without it MySQL
+#                 refuses the login ("Authentication plugin ... cannot be
+#                 loaded") even though the password is correct.
+#
+# Versions are pinned for reproducible builds.
+
+PyMySQL==1.1.1
+cryptography==43.0.3
