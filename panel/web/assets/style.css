@@ -1,0 +1,1674 @@
+/* ============================================================
+   CraftLink 管理面板（原 MC-Link）-- 样式
+   单文件、无外部依赖（不引用任何 CDN，内网也能正常显示）
+   ============================================================ */
+
+:root {
+    --bg: #11151c;
+    --card: #1b2230;
+    --card-alt: #232c3d;
+    --border: #2f3a4f;
+    --fg: #e8edf7;
+    --dim: #9aa7bd;
+    --muted: #6d7a94;
+    --accent: #4c8dff;
+    --ok: #3ddc84;
+    --warn: #ffb020;
+    --bad: #ff5f56;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Microsoft YaHei UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h2 {
+    font-size: 17px;
+    margin: 26px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+h3 { font-size: 15px; margin: 0 0 8px; }
+
+/* ---------------- top bar ---------------- */
+
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 22px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.brand-text { white-space: nowrap; }
+
+/* 品牌标记：等距草方块（内联 SVG，见 views/layout_header.php 与 login.php）。
+   产品已改名 MC-Link → CraftLink，原来那个蓝底的「MC」字母方块一起去掉了。
+
+   容器刻意保持透明、不带圆角底色：草方块自己就是一个有形状的图标，再垫一块
+   蓝色圆角底反而像贴歪了。描边由 SVG 里的 currentColor 提供，所以这里只给
+   文字颜色 —— 暗色下是浅字（方块有浅色轮廓），亮色下是深字（深色轮廓），
+   两种主题下都不会糊在背景里。 */
+.logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    flex: 0 0 auto;
+    color: var(--fg);
+}
+
+.logo-mark { display: block; width: 100%; height: 100%; }
+
+.logo.big { width: 56px; height: 56px; }
+
+.nav { display: flex; gap: 4px; }
+
+.nav a {
+    padding: 6px 14px;
+    border-radius: 7px;
+    color: var(--dim);
+    font-weight: 600;
+}
+
+.nav a:hover { background: var(--card-alt); color: var(--fg); text-decoration: none; }
+.nav a.active { background: var(--card-alt); color: var(--fg); }
+
+.status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--dim);
+    font-size: 13px;
+    flex-wrap: wrap;
+}
+
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.dot.ok { background: var(--ok); }
+.dot.bad { background: var(--bad); }
+.status-text { white-space: nowrap; }
+
+.who { margin-left: 10px; color: var(--fg); }
+.who em { color: var(--accent); font-style: normal; font-size: 12px; margin-left: 4px; }
+
+/* ---------------- layout ---------------- */
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 20px 22px 60px; }
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 18px 22px 30px;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+}
+
+/* 备案号 + 版权（纯文本，不加外链） */
+.footer .legal {
+    color: var(--dim);
+    font-size: 12px;
+}
+
+.footer .legal .sep {
+    margin: 0 6px;
+    color: var(--border);
+}
+
+/* ---- 角色色块 ----
+   三种角色三个颜色，客户端和面板用同一套：
+     root   橙黄 #ff9f43
+     admin  绿色 #3ddc84
+     player 蓝色 #4c8dff
+   颜色和背景色都由 role_badge()/role_style() 内联给出（.role-badge 在下面），
+   这里不再重复一份，避免两处定义打架。 */
+
+/* ---- 右上角的账号区 ----
+   头像圆圈 + 用户名 + 角色药丸，整块可点（进「我的账号」）。
+   之前只是一个彩色词挂在名字旁边，看着像渲染错误。 */
+.who {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 14px;
+    padding: 4px 10px 4px 4px;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--fg);
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.who:hover {
+    border-color: var(--accent);
+    background: var(--card-alt);
+}
+
+.who .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    /* The letter sits ON the role colour, so it takes that colour's opposite:
+       near-black on all three (orange/green/blue are all light enough). */
+    color: #101623;
+    background: var(--role, #4c8dff);
+    text-transform: uppercase;
+    flex: 0 0 auto;
+    overflow: hidden;
+}
+
+.who .who-name {
+    font-size: 13px;
+    font-weight: 600;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 药丸的颜色全部由 PHP 端算好（role_style()），这里只用变量。
+   原来是 color-mix()，在不支持它的浏览器上会退化成一片灰 ——
+   右上角那块"颜色覆盖了一坨"就是这么来的。 */
+.role-pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 16px;
+    color: var(--role, #4c8dff);
+    background: var(--role-bg, rgba(76, 141, 255, .16));
+    border: 1px solid var(--role-border, rgba(76, 141, 255, .45));
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 17px;
+    color: var(--role, #4c8dff);
+    background: var(--role-bg, rgba(76, 141, 255, .16));
+    border: 1px solid var(--role-border, rgba(76, 141, 255, .45));
+    white-space: nowrap;
+}
+
+/* 注意：这里原来还有一段 .autorefresh（自动刷新开关）的样式。
+   那个勾选框早就从视图里拿掉了（改成静默刷新，不再给用户一个开关），
+   所以样式跟着删干净 —— 留着只会让人以为界面上还有这个东西。
+   自动刷新的间隔仍然是 common.php 里的 AUTO_REFRESH_SECONDS。 */
+
+/* ---- 运行开关 ---- */
+.switch-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+}
+
+.switch-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 320px;
+}
+
+.switch-text b { font-size: 14px; }
+.switch-text .dim { font-size: 12.5px; }
+
+.switch-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dim { color: var(--dim); }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.mono { font-family: Consolas, "Courier New", monospace; font-size: 12.5px; }
+
+/* ---------------- cards ---------------- */
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+/* Only the six overview metrics share one row; narrow screens scroll. */
+.cards.overview-cards {
+    grid-template-columns: repeat(6, minmax(160px, 1fr));
+    overflow-x: auto;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.card-label { color: var(--dim); font-size: 12.5px; }
+.card-value { font-size: 30px; font-weight: 700; line-height: 1.1; }
+.card-value.accent { color: var(--accent); }
+.card-value-sm { font-size: 16px; font-weight: 600; }
+.card.small { padding: 11px 14px; }
+
+/* ---------------- flash ---------------- */
+
+.flash {
+    padding: 11px 15px;
+    border-radius: 9px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    background: var(--card-alt);
+}
+
+.flash.success { border-color: #2b6b45; background: #16301f; color: #b9f5d0; }
+.flash.error   { border-color: #7a3434; background: #331a1c; color: #ffc9c5; }
+.flash.warn    { border-color: #7a6330; background: #332c16; color: #ffe3ad; }
+.flash.info    { border-color: var(--border); }
+
+/* 只读模式提示条 */
+.readonly-banner {
+    border-color: #3a5a8a;
+    background: #16233a;
+    color: #bfd4f5;
+}
+
+/* ---------------- table ---------------- */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 18px;
+}
+
+.table th, .table td {
+    padding: 9px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.table th {
+    background: var(--card-alt);
+    color: var(--dim);
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.table tr:last-child td { border-bottom: none; }
+.table tr:hover td { background: rgba(76, 141, 255, 0.06); }
+.table.compact th, .table.compact td { padding: 7px 10px; font-size: 13px; }
+.row-disabled { opacity: 0.55; }
+
+/* ---------------- pills ---------------- */
+
+.pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--card-alt);
+    color: var(--fg);
+}
+
+.pill.ok   { border-color: #2b6b45; background: #16301f; color: #8ef0b6; }
+.pill.warn { border-color: #7a6330; background: #332c16; color: #ffd98a; }
+.pill.bad  { border-color: #7a3434; background: #331a1c; color: #ffb3ae; }
+
+/* ---------------- forms & buttons ---------------- */
+
+button, .button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card-alt);
+    color: var(--fg);
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease,
+                color .15s ease, box-shadow .15s ease;
+}
+
+button:hover, .button:hover { background: var(--border); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover { background: #3a6fd8; }
+button.danger { background: #43262a; border-color: #7a3434; color: #ffb3ae; }
+button.danger:hover { background: #582d32; }
+button.small { padding: 4px 10px; font-size: 12px; }
+a.button { display: inline-block; text-decoration: none; }
+a.button.small { padding: 4px 10px; font-size: 12px; }
+
+/* 键盘 Tab 到按钮时也要看得见焦点（鼠标点击时不加环，免得脏） */
+button:focus-visible, .button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* 禁用态：**两种主题都要能读**。暗色下沿用的还是原来的亮度，只是压暗一点；
+   亮色那套在文件末尾的亮色区块里单独给了颜色 —— 原来那里只有 opacity，
+   于是亮色下出现过"浅底 + 浅字"的按钮。 */
+button:disabled, .button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+/* 上锁的单选项（例如"只有根管理员能创建管理员账号"）：
+   灰掉 + 不给点，但保留在界面上并写明原因 —— 藏起来会让人以为面板坏了。 */
+label.checkbox.locked {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+label.checkbox.locked input { cursor: not-allowed; }
+
+.link-button {
+    background: none;
+    border: none;
+    color: var(--dim);
+    padding: 2px 6px;
+    text-decoration: underline;
+}
+
+.link-button:hover { background: none; color: var(--fg); }
+
+/* 提示列表（例如"中继是旧版"那条红框里点名的功能清单） */
+.flash ul.tight {
+    margin: 6px 0 6px 18px;
+    padding: 0;
+}
+
+.flash ul.tight li {
+    margin: 2px 0;
+    list-style: disc;
+}
+
+/* ---- 输入控件（文本框 / 密码 / 数字 / 下拉 / 多行）----
+
+   这一块是"现代化"的落点：以前输入框用的是浏览器默认外观（那种 Win XP 时代的
+   内凹边框），现在统一成：明确的高度（37px）、左右留白、8-10px 圆角、细边框，
+   聚焦时套一圈强调色的高亮环（box-shadow，不挤动布局），占位符有单独的颜色，
+   0.15s 过渡。 */
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+select,
+textarea {
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.4;
+    height: 37px;
+    padding: 0 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--card-alt);
+    color: var(--fg);
+    width: 100%;
+    min-width: 120px;
+    transition: border-color .15s ease, box-shadow .15s ease,
+                background .15s ease;
+}
+
+textarea {
+    height: auto;
+    min-height: 84px;
+    padding: 9px 12px;
+    resize: vertical;
+}
+
+/* 下拉框右侧自带箭头：给内容多留一点位置，不然文字会顶到箭头上 */
+select { padding-right: 30px; }
+
+/* 展开后的选项列表：Windows 上 <option> 的底色**不跟随 select**，用的是系统
+   配色（浅色）。暗色主题下如果只给 select 设深底浅字，展开的列表就会是
+   "浅底 + 浅字"，一个都看不见 —— 所以这里把颜色一起显式给上。
+   （select/textarea 本身在亮暗两套主题里各有一条显式规则。） */
+option {
+    background: var(--card);
+    color: var(--fg);
+}
+
+/* 点进输入框：边框换成强调色 + 一圈淡淡的高亮环。
+   用 box-shadow 而不是 outline：不占布局、不会把旁边的元素挤动。
+   暗色下环用半透明的亮蓝，亮色下用半透明的深蓝，两边都看得清。 */
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(76, 141, 255, .28);
+}
+
+/* 键盘焦点（Tab）也走同一套，别让浏览器再叠一层默认轮廓 */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: none;
+}
+
+input[type="text"]:hover:not(:focus),
+input[type="password"]:hover:not(:focus),
+input[type="number"]:hover:not(:focus),
+input[type="search"]:hover:not(:focus),
+select:hover:not(:focus),
+textarea:hover:not(:focus) {
+    border-color: #3d4a63;
+}
+
+::placeholder { color: var(--muted); opacity: 1; }
+
+/* ---- 关掉浏览器自带的「显示密码」小眼睛 -------------------------------
+   Edge（Windows 上的默认浏览器）会在每个 input[type=password] 的右端画一枚
+   它自己的小眼睛，浏览器给的那一枚和我们的按钮叠在一起 —— 用户看到的就是
+   「输入密码的时候出现两个小眼睛」，一个居中一个不居中，点哪个反应都不一样。
+   ::-ms-reveal / ::-ms-clear 是关掉它的官方方式（Chromium 版 Edge 至今仍认
+   这两个伪元素）。-webkit-appearance:none 则去掉 WebKit 系给密码框加的其它
+   原生装饰，保证输入框右端只有我们这一枚按钮。 */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+/* Safari 在密码框右端浮的那个钥匙 / 强密码图标同样会和我们的按钮重叠 */
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-strong-password-auto-fill-button {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+input[type="password"] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* 禁用态：压暗 + 不给点。每个类型单独写一行（静态检查逐条查"亮色有没有
+   显式颜色"），亮色那一套在文件末尾。 */
+input[type="text"]:disabled,
+input[type="password"]:disabled,
+input[type="number"]:disabled,
+input[type="search"]:disabled,
+select:disabled,
+textarea:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+input.tiny { width: 110px; min-width: 0; display: inline-block; }
+
+label { display: block; color: var(--dim); font-size: 12.5px; margin-bottom: 4px; }
+label.checkbox { display: flex; align-items: center; gap: 6px; margin: 0; }
+label.checkbox input { width: auto; }
+
+/* ---- 复选框 / 单选框：不用系统默认方块 ----
+   原生控件藏起来（appearance:none）之后自己画：方框 + 对号 / 圆点。
+   表单语义一个字都没动：name、value、checked、disabled、required 全在原生
+   input 上，键盘焦点（:focus-visible）也还在，提交和 JS 读到的和以前一样。
+
+   每个选择器单独写一行，是为了让 tests/panel_static_test.py 能逐条查
+   "亮色有没有显式颜色" —— 合并成一行的选择器列表它认不出来。 */
+
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    margin: 0;
+    border: 1.5px solid #46536e;
+    border-radius: 5px;
+    background: var(--card-alt);
+    cursor: pointer;
+    position: relative;
+    transition: background .15s ease, border-color .15s ease,
+                box-shadow .15s ease;
+}
+
+input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    margin: 0;
+    border: 1.5px solid #46536e;
+    border-radius: 50%;
+    background: var(--card-alt);
+    cursor: pointer;
+    position: relative;
+    transition: background .15s ease, border-color .15s ease,
+                box-shadow .15s ease;
+}
+
+input[type="checkbox"]:hover,
+input[type="radio"]:hover {
+    border-color: var(--accent);
+}
+
+/* 勾：两笔画出来的对号（不依赖字体里的 ✓，中文/英文字体没有也画得出来） */
+input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 4.5px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* 圆点：先画好、缩到 0，选中时再放大回来（有个小过渡，不是硬切换） */
+input[type="radio"]::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform .15s ease;
+}
+
+input[type="radio"]:checked::after {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(76, 141, 255, .28);
+}
+
+/* 禁用态：压暗但**不是**看不见 —— 锁着的单选项（「只有根管理员能创建」）
+   必须还能读出它写的是什么，见下面 label.checkbox.locked 的说明。 */
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
+/* 只读账户看到的"锁着的单选项"（例如只有根管理员能创建管理员账号）：
+   整块压暗，并说明为什么点不了 —— 见 .checkbox.locked 上面的说明。 */
+label.checkbox:has(input:disabled) { cursor: not-allowed; }
+
+label.checkbox:has(input:disabled) > input:not(:checked) { opacity: .45; }
+
+/* ---- 分段选择器（圆角方块，选中的那个填强调色）----
+   「新建账号」里的角色选择器用它。
+
+   为什么不再用 label.checkbox + input[type=radio]：CSS 里
+   `label.checkbox input { width: auto }`（那是为复选框写的）比
+   `input[type="radio"] { width: 17px }` 更具体，于是 appearance:none 之后的
+   单选框宽度被改成 auto —— 圆点被压成一条细缝，选中时那个 7px 的圆点还会溢
+   出到框外。用户报的「选择器渲染 BUG」就是这个。
+
+   这里原生 radio 仍然在 DOM 里（name / value / checked / disabled 一个字没
+   动），只是视觉上藏起来：点击整块 label 就能选中，键盘 Tab 进来之后方向键
+   在组内切换（原生单选框组的行为），表单提交的值和以前完全一样。 */
+
+.segmented {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
+    /* 默认正好和输入框一样高（3+3 内边距 + 29 的选项 + 1+1 边框 = 37px）。
+       用 min-height 而不是 height：窄屏上两个选项换行时它会跟着变高，
+       不会被裁掉一半。 */
+    min-height: 37px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--card-alt);
+}
+
+/* 原生单选框：藏在视觉之外，但仍然能被点击（label 包着它）和聚焦（Tab）。 */
+.segmented input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    border: 0;
+    pointer-events: none;
+}
+
+.segmented-option {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    color: var(--dim);
+    font-size: 12.5px;
+}
+
+.segmented-label {
+    display: inline-block;
+    padding: 5px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    line-height: 17px;
+    white-space: nowrap;
+}
+
+.segmented-option input:checked + .segmented-label {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.segmented-option input:focus-visible + .segmented-label {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* 锁着的选项（「只有根管理员能创建」）：压暗并说明原因，不是隐藏 ——
+   藏起来会让人以为面板坏了。 */
+.segmented-option.locked { cursor: not-allowed; }
+
+.segmented-option.locked .segmented-label {
+    background: transparent;
+    border-color: transparent;
+    color: var(--dim);
+    opacity: .55;
+}
+
+/* 两套主题下都要写全颜色（亮色那套在文件末尾）。
+   :not(.locked)：锁着的那格鼠标划过不该变亮（它根本点不了）。 */
+.segmented .segmented-option:not(.locked):hover .segmented-label { color: var(--fg); }
+
+/* ---- 密码框里的「显示密码」小眼睛 ----
+   包一层 .password-field 就能在输入框右端浮一个按钮（见 views/prefs.php 里
+   那段内联脚本；不新增 .js 文件，部署包只收 .css）。
+
+   为什么容器是 flex 而不是纯 position:relative —— 这决定了小眼睛居不居中：
+   .password-field 是个 <span>（行内元素），行内盒的高度由"行盒"决定：里面
+   那个 37px 的输入框坐在基线上，基线下面还要留出字体的下沿空间，于是容器
+   比输入框高出几个像素。按钮是 top:50% 定位的，落点就是"容器"的中心 ——
+   比输入框的中心低几像素，看起来就是没对齐。
+   改成 display:flex + align-items:center 之后，容器高度正好等于输入框高度
+   （37px），top:50% 就是输入框的几何中心，点起来、看起来都在正中间。 */
+
+.password-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.password-field input[type="password"],
+.password-field input[type="text"] {
+    flex: 1 1 auto;
+    padding-right: 40px;
+}
+
+.password-field .password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-color: transparent;
+    border-radius: 7px;
+    color: var(--dim);
+}
+
+.password-field .password-toggle:hover {
+    background: var(--border);
+    color: var(--fg);
+}
+
+.password-field .password-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.password-field .eye { width: 17px; height: 17px; display: block; }
+.password-field .eye-off { display: none; }
+.password-field .password-toggle.revealed .eye { display: none; }
+.password-field .password-toggle.revealed .eye-off { display: block; }
+
+.inline { display: inline-block; margin: 0; }
+
+/* 一行里左边说明、右边按钮（例如「操作日志」页顶部的清空按钮） */
+.toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 12px;
+}
+
+/* ---- 操作日志：服务端日志下载 ----
+   中继自己那份日志（relay.log：连接 / 配对 / 报错）原样下载，反馈问题时附上
+   它最有用。这一块只用主题变量（--card / --border / --dim），按钮复用全局的
+   button 样式，所以亮色和暗色都自动跟着走 —— 不需要在文件末尾的亮色区块里
+   再写一遍颜色。 */
+.log-export {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 10px;
+    padding: 10px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+/* ---- 操作日志：筛选条 ----
+   分类 / 结果两个下拉 + 一个「筛选」按钮，默认（不带参数）就是「全部」。
+   筛选是**服务端**做的（index.php 把 category / outcome 拼进 SQL），所以
+   筛出来的就是全部历史里符合条件的那一批，而不是"最近 200 条里再挑"。 */
+
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px;
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.filter-bar label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+}
+
+.filter-bar select {
+    width: auto;
+    min-width: 148px;
+    height: 34px;
+}
+
+/* ---- 操作日志：分类徽章 ----
+   每个分类一个颜色（亮色那一套在文件末尾），一眼看得出这行是哪一类：
+   登录 / 房间 / 连接 / 面板操作 / 系统。 */
+
+.cat {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 17px;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+    background: var(--card-alt);
+    color: var(--dim);
+}
+
+.cat-login      { background: #17263f; border-color: #33507e; color: #a9c6ff; }
+.cat-room       { background: #2a2036; border-color: #5b3f78; color: #d9bcff; }
+.cat-connection { background: #14332a; border-color: #2f6b52; color: #8ef0b6; }
+.cat-panel      { background: #33280f; border-color: #7a6330; color: #ffd98a; }
+.cat-system     { background: #262b33; border-color: #454e5e; color: #c3cbd9; }
+
+/* ---- 操作日志：表格要能"呼吸" ----
+   以前这张表和别的表共用一套密度（9px/12px 的内边距、紧凑行距），7 列挤在
+   一起，说明一长就被压成一团。这里给它自己的节奏：
+     * 行更高、行距 1.65，行与行之间不再粘在一起；
+     * 固定列宽，说明列拿到最大的一份，长句子换行而不是把表格撑爆；
+     * 只有技术列（时间 / 会话 / 来源 IP）用等宽字体，人名、房间名和说明
+       用正文字体 —— 一眼能分出"数据"和"文字"。 */
+
+.table.events-table { table-layout: fixed; }
+
+.table.events-table th,
+.table.events-table td {
+    padding: 11px 14px;
+    line-height: 1.65;
+    vertical-align: top;
+    font-size: 13px;
+}
+
+.table.events-table th:nth-child(1) { width: 12.5%; }   /* 时间 */
+.table.events-table th:nth-child(2) { width: 8%; }      /* 分类 */
+.table.events-table th:nth-child(3) { width: 13.5%; }   /* 操作 */
+.table.events-table th:nth-child(4) { width: 10%; }     /* 操作者 */
+.table.events-table th:nth-child(5) { width: 12%; }     /* 房间 */
+.table.events-table th:nth-child(6) { width: 8.5%; }    /* 会话 */
+.table.events-table th:nth-child(7) { width: 11%; }     /* 来源 IP */
+.table.events-table th:nth-child(8) { width: 24.5%; }   /* 说明 */
+
+.table.events-table td { overflow-wrap: anywhere; }
+.table.events-table td.mono { font-size: 12.5px; }
+
+/* 说明列：长文本折行显示（窄屏那条 white-space: nowrap 对这张表不适用，
+   见文件末尾的 @media）。 */
+.table.events-table td.cell-detail { white-space: normal; }
+
+/* ---- 账号表「操作」列：两行分组，不再挤成一坨 ---- */
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 300px;
+    /* 不拉伸子元素：flex 列默认 stretch，会把一个「去我的账号修改」的
+       链接按钮拉满整列，一直顶到表格右边，看着像排版坏了。 */
+    align-items: flex-start;
+}
+
+.actions .action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.actions form {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    margin: 0;
+}
+
+/* 操作列里的输入框：短一点、矮一点，别撑破表格。
+   （基样式的高度是 37px，那是给整行表单用的；表格里要跟着 .small 按钮走。） */
+.actions input.field {
+    width: 116px;
+    min-width: 0;
+    height: 30px;
+    padding: 0 9px;
+    font-size: 12.5px;
+    border-radius: 7px;
+    flex: 0 0 auto;
+}
+
+/* 操作列里的小眼睛样式（.actions .password-field .password-toggle）已经删掉：
+   那一列现在只有明文输入框（管理员给别人设的新密码本来就要看得见），
+   小眼睛只留在真正的密码框上（登录页和「我的账号」）。 */
+
+.actions button.small {
+    padding: 4px 9px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* 账号表：操作列宽一些，其他列收窄 */
+.table.users-table { table-layout: fixed; }
+.table.users-table th:nth-child(1) { width: 12%; }
+.table.users-table th:nth-child(2) { width: 8%; }
+.table.users-table th:nth-child(3) { width: 8%; }
+.table.users-table th:nth-child(4) { width: 7%; }
+.table.users-table th:nth-child(5) { width: 8%; }
+.table.users-table th:nth-child(6) { width: 12%; }
+.table.users-table th:nth-child(7) { width: 11%; }
+.table.users-table th:nth-child(8) { width: 12%; }
+.table.users-table th:nth-child(9) { width: 22%; }
+.table.users-table td { overflow-wrap: anywhere; }
+
+/* 窄屏时操作列竖排更省地方 */
+@media (max-width: 1100px) {
+    .table.users-table { table-layout: auto; }
+    .actions { min-width: 240px; }
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+
+.form-row > label { flex: 1 1 200px; margin-bottom: 0; }
+.form-row > label.checkbox { flex: 0 0 auto; padding-bottom: 8px; }
+.form-row > .segmented { flex: 0 0 auto; }
+.form-row button { flex: 0 0 auto; }
+
+.panel-block { margin-bottom: 22px; }
+
+/* ---------------- rooms ---------------- */
+
+.room-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+
+.room-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.room-head h3 { margin: 0 0 2px; font-size: 16px; color: var(--accent); }
+.room-actions { display: flex; align-items: center; gap: 10px; }
+
+.room-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin: 10px 0 12px;
+    color: var(--dim);
+    font-size: 12.5px;
+}
+
+.room-meta b { color: var(--fg); }
+
+/* 房间详情里的小标题（「房间成员」踢人表用它）。和房间名区分开层级，
+   颜色走主题变量，暗色 / 亮色都自动成立。 */
+.room-sub {
+    margin: 14px 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dim);
+}
+
+/* ---- 「关闭房间」等待对话框 ----
+   中继关房是有意慢的：先通知房间里的每个客户端，等他们自己退出，超时的才
+   强制断开（中继内部最多 25 秒）。所以关房表单不再同步提交，而是由
+   views/layout_footer.php 里的脚本改成 fetch 提交 + 这个对话框。
+   文案和流程都在脚本里，这里只管样子。 */
+
+/* 脚本按 form.js-room-close 找要接管的关房表单。
+   这条规则本身没有视觉效果，但必须存在：tests/panel_static_test.py 会拿
+   视图里用到的 class 对着 CSS 查一遍。 */
+form.js-room-close { display: inline-block; margin: 0; }
+
+dialog.room-wait {
+    min-width: 320px;
+    max-width: 460px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--fg);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, .6);
+}
+
+/* 背景压暗：等待期间后面的数字还在被 live.php 更新，但没有它的话
+   对话框看起来像是页面渲染错位。 */
+dialog.room-wait::backdrop { background: rgba(8, 11, 16, .62); }
+
+.room-wait-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 8px;
+}
+
+/* 转圈：让"正在做事"一眼可见，而不是只有一个静止的对话框 */
+.room-wait-spinner {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: room-wait-spin .8s linear infinite;
+}
+
+@keyframes room-wait-spin {
+    to { transform: rotate(360deg); }
+}
+
+.room-wait-title { font-size: 14.5px; }
+
+.room-wait-timer {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+
+.room-wait-text {
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+}
+
+.room-wait-text.ok { color: #b9f5d0; }
+.room-wait-text.bad { color: #ffc9c5; }
+
+.room-wait-hint {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--dim);
+}
+
+.room-wait-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+@media (max-width: 520px) {
+    dialog.room-wait { min-width: 0; width: calc(100% - 24px); }
+}
+
+/* ---------------- login ---------------- */
+
+.login-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 390px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 26px;
+}
+
+.login-head { text-align: center; margin-bottom: 20px; }
+.login-head h1 { font-size: 18px; margin: 12px 0 4px; }
+.login-head p { margin: 0; font-size: 12.5px; }
+
+.login-form label { margin-bottom: 12px; }
+.login-form button { width: 100%; margin-top: 6px; padding: 9px; }
+.login-card .small { margin-top: 16px; margin-bottom: 0; font-size: 12px; }
+
+@media (max-width: 720px) {
+    .topbar { flex-wrap: wrap; gap: 10px; }
+    .status { margin-left: 0; width: 100%; }
+    .table { display: block; overflow-x: auto; white-space: nowrap; }
+
+    /* 日志表的列宽是百分比，窄屏上再"不换行"就只剩横向滚动了 ——
+       长说明直接折行更好读。 */
+    .table.events-table { table-layout: auto; white-space: normal; }
+}
+
+/* ============================================================
+   语言 / 主题 切换条（views/prefs.php，顶栏和登录页共用）
+   ------------------------------------------------------------
+   两个切换都是普通链接（?lang= / ?theme=），不需要 JavaScript。
+   ============================================================ */
+
+.prefs {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 3px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card-alt);
+}
+
+.pref {
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 17px;
+    color: var(--dim);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.pref:hover {
+    color: var(--fg);
+    background: var(--card);
+    text-decoration: none;
+}
+
+.pref.active { background: var(--accent); color: #fff; }
+.pref.active:hover { background: var(--accent); color: #fff; }
+
+.pref-sep {
+    display: inline-block;
+    width: 1px;
+    height: 14px;
+    margin: 0 4px;
+    background: var(--border);
+}
+
+/* 登录页没有顶栏，切换条居中放在卡片下面 */
+.login-stack {
+    width: 100%;
+    max-width: 390px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+/* ---- 头像图片（assets/avatar.png，256×256 透明底）----
+   图片不存在时 login.php / layout_header.php 会退回原来的字母方块，
+   所以这里只描述"有图片"的样子。 */
+
+.login-avatar {
+    display: inline-block;
+    width: 84px;
+    height: 84px;
+    border-radius: 18px;
+    background: var(--card-alt);
+    /* 像素画放大：别糊 */
+    image-rendering: pixelated;
+}
+
+/* 顶栏那一小个：保留角色颜色的圈（role_style() 给的 --role），
+   只是把里面的字母换成头像图片。 */
+.who .avatar.has-image {
+    background: var(--card-alt);
+    border: 2px solid var(--role, #4c8dff);
+}
+
+.who .avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    image-rendering: pixelated;
+}
+
+/* ============================================================
+   主题：亮色 / 暗色
+   ------------------------------------------------------------
+   暗色就是原来那一套（:root 里的变量一个字都没改）。data-theme="dark"
+   只是把同样的值再写一遍，所以没选主题和选了暗色长得完全一样。
+
+   亮色在 html[data-theme="light"] 下重写变量，并加一层柔和的"极光"底：
+   body::before 是固定定位的模糊色晕（几团 radial-gradient + filter: blur），
+   z-index:-1 让它在页面底色之上、所有卡片和文字之下 —— 卡片依然是实心的，
+   只有页面空隙透出颜色。纯 CSS，没有外部图片，没有任何动画循环。
+   ============================================================ */
+
+html[data-theme="dark"] {
+    --bg: #11151c;
+    --card: #1b2230;
+    --card-alt: #232c3d;
+    --border: #2f3a4f;
+    --fg: #e8edf7;
+    --dim: #9aa7bd;
+    --muted: #6d7a94;
+    --accent: #4c8dff;
+    --ok: #3ddc84;
+    --warn: #ffb020;
+    --bad: #ff5f56;
+}
+
+html[data-theme="light"] {
+    --bg: #eef1f8;
+    --card: #ffffff;
+    --card-alt: #f5f7fc;
+    --border: #d8deea;
+    --fg: #1b2230;
+    --dim: #4f5a73;
+    --muted: #6b7590;
+    --accent: #2f6fe4;
+    --ok: #17a05e;
+    --warn: #b5761a;
+    --bad: #d64540;
+
+    /* 底色画在 <html> 上，body 必须透明：body::before 的 z-index 是负的，
+       它会画在 body 自己的背景后面 —— body 一旦有底色，极光就被埋了。 */
+    background: #eef1f8;
+}
+
+html[data-theme="light"] body {
+    background: transparent;
+    color: var(--fg);
+}
+
+html[data-theme="light"] body::before {
+    content: "";
+    position: fixed;
+    top: -20vh;
+    bottom: -20vh;
+    left: -10vw;
+    right: -10vw;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(closest-side at 18% 20%,
+            rgba(76, 141, 255, .55), rgba(76, 141, 255, 0) 72%),
+        radial-gradient(closest-side at 82% 16%,
+            rgba(61, 220, 132, .45), rgba(61, 220, 132, 0) 72%),
+        radial-gradient(closest-side at 64% 84%,
+            rgba(255, 159, 67, .40), rgba(255, 159, 67, 0) 72%),
+        radial-gradient(closest-side at 20% 86%,
+            rgba(150, 110, 255, .38), rgba(150, 110, 255, 0) 72%);
+    filter: blur(64px) saturate(1.1);
+    opacity: .75;
+}
+
+/* ---- 亮色下的元件 ----
+   暗色那一套在文件上半部分，一个字没动；下面只是亮色的覆盖。 */
+
+html[data-theme="light"] .topbar {
+    background: var(--card);
+    box-shadow: 0 1px 0 rgba(24, 34, 56, .04);
+}
+
+html[data-theme="light"] .login-card {
+    box-shadow: 0 12px 34px rgba(31, 42, 66, .10);
+}
+
+html[data-theme="light"] .flash { background: var(--card); }
+html[data-theme="light"] .flash.success {
+    background: #e9f8ef;
+    border-color: #a8ddbd;
+    color: #14683c;
+}
+
+html[data-theme="light"] .flash.error {
+    background: #fdecea;
+    border-color: #f0b3ae;
+    color: #9c2a24;
+}
+
+html[data-theme="light"] .flash.warn {
+    background: #fdf5e2;
+    border-color: #ecd399;
+    color: #7f5a10;
+}
+
+html[data-theme="light"] .flash.info {
+    background: #eef3fd;
+    border-color: #c3d5f6;
+    color: #27457f;
+}
+
+html[data-theme="light"] .readonly-banner {
+    background: #eaf1fd;
+    border-color: #b6cdf5;
+    color: #27457f;
+}
+
+html[data-theme="light"] .pill {
+    background: #eef1f7;
+    color: #2b3550;
+}
+
+html[data-theme="light"] .pill.ok {
+    background: #e7f7ee;
+    border-color: #a8ddbd;
+    color: #14683c;
+}
+
+html[data-theme="light"] .pill.warn {
+    background: #fdf3df;
+    border-color: #e8cd90;
+    color: #7f5a10;
+}
+
+html[data-theme="light"] .pill.bad {
+    background: #fdeaea;
+    border-color: #eeb0ac;
+    color: #9c2a24;
+}
+
+html[data-theme="light"] button,
+html[data-theme="light"] .button {
+    background: #f4f6fb;
+    border-color: #c3ccdd;
+    color: #1b2230;
+}
+
+html[data-theme="light"] button:hover,
+html[data-theme="light"] .button:hover {
+    background: #e7ecf6;
+    border-color: #a9b6cd;
+    color: #101623;
+}
+
+html[data-theme="light"] button:active,
+html[data-theme="light"] .button:active {
+    background: #dbe3f1;
+    border-color: #94a3bf;
+    color: #101623;
+}
+
+/* 小号 / 表内 / 表单里那几个按钮：形状各有各的（padding、宽度），但颜色和
+   基样式一样。这里显式再写一遍，原因有二：
+     1. 亮色下"没写"就等于继承暗色的浅色文字 —— 白底白字就是这么来的；
+     2. 静态检查要求每个按钮选择器都能在亮色里找到自己的颜色。 */
+html[data-theme="light"] button.small {
+    background: #f4f6fb;
+    border-color: #c3ccdd;
+    color: #1b2230;
+}
+
+html[data-theme="light"] button.small:hover {
+    background: #e7ecf6;
+    border-color: #a9b6cd;
+}
+
+/* 表单里 / 表里那几个按钮：只有布局（宽度、间距），颜色跟着基样式。
+   这里显式写一遍，是为了让"亮色有没有颜色"这件事一眼可查 —— 也免得以后
+   有人把上面的基样式一改，这几个按钮在亮色下就变成白底白字。 */
+html[data-theme="light"] .actions button.small,
+html[data-theme="light"] .form-row button,
+html[data-theme="light"] .login-form button {
+    background: #f4f6fb;
+    border-color: #c3ccdd;
+    color: #1b2230;
+}
+
+/* 次要按钮：亮底 + 深字 + 看得见的边框。
+   暗色那边本来就是深底浅字，这里只补亮色。 */
+html[data-theme="light"] button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
+html[data-theme="light"] button.primary:hover {
+    background: #2a63cd;
+    border-color: #2a63cd;
+    color: #ffffff;
+}
+
+html[data-theme="light"] button.primary:active {
+    background: #24559f;
+    border-color: #24559f;
+    color: #ffffff;
+}
+
+html[data-theme="light"] button.danger {
+    background: #fdeaea;
+    border-color: #eeb0ac;
+    color: #9c2a24;
+}
+
+html[data-theme="light"] button.danger:hover { background: #fbd9d6; }
+html[data-theme="light"] button.danger:active { background: #f6c6c2; }
+
+/* 禁用态：两种主题下都要还能读。不透明度 + 指针，颜色沿用各自主题的正文色，
+   所以不会出现"浅灰底 + 浅灰字"那种看不见的按钮（原来亮色下就是白底白字）。 */
+html[data-theme="light"] button:disabled,
+html[data-theme="light"] .button:disabled {
+    background: #f0f2f7;
+    border-color: #dfe4ee;
+    color: #96a0b5;
+}
+
+html[data-theme="light"] .link-button {
+    background: none;
+    border-color: transparent;
+    color: var(--accent);
+}
+
+html[data-theme="light"] .link-button:hover {
+    background: none;
+    border-color: transparent;
+    color: #1c4fa8;
+}
+
+/* 语言 / 主题切换药丸：亮色下白底 + 深字，选中态是实心强调色 + 白字。 */
+html[data-theme="light"] .prefs {
+    background: #ffffff;
+    border-color: #d8deea;
+}
+
+html[data-theme="light"] .pref:hover {
+    background: #eef2f9;
+    border-color: transparent;
+    color: #101623;
+}
+
+/* 没选中的那个（中文 / English、亮色 / 暗色）：亮色下要写明白深浅，
+   不然继承来的还是暗色的浅色字，落在白底上就糊了。 */
+html[data-theme="light"] .pref,
+html[data-theme="light"] a.pref {
+    background: transparent;
+    border-color: transparent;
+    color: #3d475e;
+}
+
+html[data-theme="light"] .pref.active,
+html[data-theme="light"] a.pref.active {
+    background: var(--accent);
+    border-color: transparent;
+    color: #ffffff;
+}
+
+html[data-theme="light"] .pref.active:hover {
+    background: var(--accent);
+    color: #ffffff;
+}
+
+html[data-theme="light"] .pref-sep { background: #d8deea; }
+
+html[data-theme="light"] input[type="text"],
+html[data-theme="light"] input[type="password"],
+html[data-theme="light"] input[type="number"],
+html[data-theme="light"] input[type="search"],
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+    background: #ffffff;
+    border-color: #ccd4e2;
+    color: #1b2230;
+}
+
+html[data-theme="light"] input[type="text"]:hover:not(:focus),
+html[data-theme="light"] input[type="password"]:hover:not(:focus),
+html[data-theme="light"] input[type="number"]:hover:not(:focus),
+html[data-theme="light"] input[type="search"]:hover:not(:focus),
+html[data-theme="light"] select:hover:not(:focus),
+html[data-theme="light"] textarea:hover:not(:focus) {
+    border-color: #9fadc6;
+}
+
+/* 聚焦环：亮色下用深一号的蓝，落在白底上也看得清 */
+html[data-theme="light"] input[type="text"]:focus,
+html[data-theme="light"] input[type="password"]:focus,
+html[data-theme="light"] input[type="number"]:focus,
+html[data-theme="light"] input[type="search"]:focus,
+html[data-theme="light"] select:focus,
+html[data-theme="light"] textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(47, 111, 228, .22);
+}
+
+html[data-theme="light"] ::placeholder { color: #6b7590; }
+
+/* 禁用的输入框：亮色下是浅灰底 + 灰字，仍然读得清（暗色那边只压了透明度，
+   因为深底浅字压暗之后照样能读）。 */
+html[data-theme="light"] input[type="text"]:disabled,
+html[data-theme="light"] input[type="password"]:disabled,
+html[data-theme="light"] input[type="number"]:disabled,
+html[data-theme="light"] input[type="search"]:disabled,
+html[data-theme="light"] select:disabled,
+html[data-theme="light"] textarea:disabled {
+    background: #f0f2f7;
+    border-color: #dfe4ee;
+    color: #5f6a80;
+}
+
+/* 展开的选项列表（见上面 option 那条）：亮色下白底深字 */
+html[data-theme="light"] option {
+    background: #ffffff;
+    color: #1b2230;
+}
+
+/* 自定义复选框 / 单选框：亮色下是白底 + 灰边框，选中的那格是实心强调色。
+   暗色那一套在上面，两边都给足了颜色，没有一处靠继承。每个选择器单写一行，
+   好让静态检查逐条查"亮色有没有显式颜色"。 */
+html[data-theme="light"] input[type="checkbox"],
+html[data-theme="light"] input[type="radio"] {
+    background: #ffffff;
+    border-color: #b9c3d6;
+}
+
+html[data-theme="light"] input[type="checkbox"]:hover,
+html[data-theme="light"] input[type="radio"]:hover {
+    border-color: var(--accent);
+}
+
+html[data-theme="light"] input[type="checkbox"]:checked,
+html[data-theme="light"] input[type="radio"]:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+html[data-theme="light"] input[type="checkbox"]:focus-visible,
+html[data-theme="light"] input[type="radio"]:focus-visible {
+    box-shadow: 0 0 0 3px rgba(47, 111, 228, .22);
+}
+
+html[data-theme="light"] input[type="checkbox"]:disabled,
+html[data-theme="light"] input[type="radio"]:disabled {
+    background: #eef1f7;
+    border-color: #d5dbe7;
+}
+
+/* 密码框里的小眼睛：亮色下是浅灰底 + 深色图标，hover 变深一点 */
+html[data-theme="light"] .password-field .password-toggle {
+    background: transparent;
+    border-color: transparent;
+    color: #5a6478;
+}
+
+html[data-theme="light"] .password-field .password-toggle:hover {
+    background: #e7ecf6;
+    color: #101623;
+}
+
+/* 分段选择器：亮色下是浅灰底 + 灰边，选中的那格是实心强调色 + 白字
+   （和「语言 / 主题」切换条同一套逻辑）。锁着的那格单独写一遍，
+   否则会继承到暗色的浅色文字，落在白底上就糊了。 */
+html[data-theme="light"] .segmented {
+    background: #f5f7fc;
+    border-color: #ccd4e2;
+}
+
+html[data-theme="light"] .segmented-option { color: #4f5a73; }
+
+html[data-theme="light"] .segmented .segmented-option:hover .segmented-label {
+    color: #1b2230;
+}
+
+html[data-theme="light"] .segmented-option input:checked + .segmented-label {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
+html[data-theme="light"] .segmented-option.locked .segmented-label {
+    background: transparent;
+    border-color: transparent;
+    color: #5f6a80;
+    opacity: .6;
+}
+
+/* 日志分类徽章：亮色下淡底 + 深字，和 / 上面的暗色一套一一对应。 */
+html[data-theme="light"] .cat {
+    background: #eef1f7;
+    border-color: #ccd4e2;
+    color: #38425c;
+}
+
+html[data-theme="light"] .cat-login      { background: #e8eefc; border-color: #b9cdf5; color: #27457f; }
+html[data-theme="light"] .cat-room       { background: #f2eafc; border-color: #d3bdf0; color: #552b86; }
+html[data-theme="light"] .cat-connection { background: #e7f7ee; border-color: #a8ddbd; color: #14683c; }
+html[data-theme="light"] .cat-panel      { background: #fdf3df; border-color: #e8cd90; color: #7f5a10; }
+html[data-theme="light"] .cat-system     { background: #eef1f7; border-color: #ccd4e2; color: #38425c; }
+
+html[data-theme="light"] .table th { background: #f5f7fc; }
+html[data-theme="light"] .table tr:hover td { background: rgba(47, 111, 228, .06); }
+
+/* 角色药丸 / 徽章：亮色下改成"实心角色色 + 深色字"，用的还是 role_style()
+   给的那三个颜色。原来那种"淡底 + 亮色字"在白色卡片上对比度只有 1.6:1，
+   绿字几乎看不见。 */
+html[data-theme="light"] .role-pill,
+html[data-theme="light"] .role-badge {
+    background: var(--role, #4c8dff);
+    border-color: rgba(0, 0, 0, .12);
+    color: #101623;
+}
+
+html[data-theme="light"] dialog.room-wait {
+    box-shadow: 0 18px 46px rgba(31, 42, 66, .28);
+}
+
+html[data-theme="light"] dialog.room-wait::backdrop {
+    background: rgba(24, 31, 46, .35);
+}
+
+html[data-theme="light"] .room-wait-text.ok { color: #14683c; }
+html[data-theme="light"] .room-wait-text.bad { color: #9c2a24; }
