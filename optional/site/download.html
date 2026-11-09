@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<!-- 可选组件（optional/site，不随主交付发布）：以下页面是我们早期官网的原样留档，
+     仅作参考实现。里面的版本号 / 日期 / 字节数 / 备案号都是占位或过时内容，
+     请按 optional/site/README.md 重新填入你自己的真实信息。 -->
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>下载 —— CraftLink 方块联机</title>
+<meta name="description" content="下载 CraftLink（方块联机）客户端：Windows 10/11 单文件 CraftLink.exe，约 12.4 MB 免安装；含系统要求、SHA-256 校验值与下载常见问题。">
+<meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
+<script>
+/* 尽早套用已保存的主题，避免刷新时闪白/闪黑（无 JS 时跟随系统） */
+(function () {
+  try {
+    var t = window.localStorage.getItem('craftlink-theme');
+    if (t === 'light' || t === 'dark') {
+      document.documentElement.setAttribute('data-theme', t);
+    }
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" role="img" aria-label="CraftLink 方块标志" focusable="false">
+        <rect width="32" height="32" rx="8" fill="url(#clBrand)"></rect>
+        <defs>
+          <linearGradient id="clBrand" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#6f9bff"></stop>
+            <stop offset="1" stop-color="#3ddc84"></stop>
+          </linearGradient>
+        </defs>
+        <g fill="#ffffff" opacity="0.94">
+          <rect x="6" y="6" width="8" height="8" rx="1.6"></rect>
+          <rect x="18" y="6" width="8" height="8" rx="1.6" opacity="0.72"></rect>
+          <rect x="6" y="18" width="8" height="8" rx="1.6" opacity="0.72"></rect>
+        </g>
+        <rect x="18" y="18" width="8" height="8" rx="1.6" fill="#0f1726"></rect>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">CraftLink</span>
+        <span class="brand-sub">方块联机</span>
+      </span>
+    </a>
+
+    <nav class="site-nav" id="site-nav" data-nav aria-label="主导航">
+      <a href="index.html">首页</a>
+      <a href="tech.html">技术路线</a>
+      <a href="download.html" aria-current="page">下载</a>
+      <a href="faq.html">常见问题</a>
+    </nav>
+
+    <div class="header-tools">
+      <button class="icon-btn theme-toggle" type="button" data-theme-toggle data-pref="system" aria-label="主题：跟随系统" title="主题：跟随系统">
+        <svg class="icon icon-light" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.1"></circle>
+          <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"></path>
+        </svg>
+        <svg class="icon icon-dark" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7Z"></path>
+        </svg>
+        <svg class="icon icon-system" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.8" y="4.2" width="18.4" height="12.4" rx="2"></rect>
+          <path d="M9 20.2h6M12 16.6v3.6"></path>
+        </svg>
+      </button>
+      <button class="icon-btn nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-controls="site-nav" aria-label="展开导航菜单">
+        <svg class="icon icon-menu" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16"></path>
+        </svg>
+        <svg class="icon icon-close" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6L6 18"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <p class="pill"><span class="dot" aria-hidden="true"></span>下载 · 客户端 v3.0.0 · 2026-09-18</p>
+      <h1>下载 CraftLink</h1>
+      <p class="hero-lede">
+        一个 Windows 单文件 exe，约 12.4 MB，免安装。下载后直接双击，
+        不用装 Python、不用装运行库、不用管理员权限。
+      </p>
+      <div class="hero-actions">
+        <!-- 站点根目录下的 download/CraftLink.exe；用相对地址，换域名 / 换端口都不用改这里 -->
+        <a class="btn btn-primary" id="download" href="download/CraftLink.exe" download>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3.6v10.8M7.4 10l4.6 4.6L16.6 10M4.6 20.4h14.8"></path>
+          </svg>
+          下载 CraftLink.exe
+        </a>
+        <a class="btn btn-ghost" href="faq.html">常见问题</a>
+      </div>
+      <p class="hero-note">
+        文件约 12.4 MB（13,021,016 字节），双击即用，不用安装。
+        下载后可以按下面的 SHA-256 核对文件是否完整。
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== 文件信息 ===================== -->
+  <section class="section" aria-labelledby="file-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">文件信息</span>
+        <h2 id="file-title">你下载到的会是什么</h2>
+        <p>只有一个文件。没有安装程序，没有附带的 DLL，也没有捆绑任何东西。</p>
+      </div>
+
+      <div class="dl-panel" data-reveal>
+        <div>
+          <p><span class="dl-file">CraftLink.exe</span></p>
+          <ul class="kv">
+            <li><span class="kv-key">名称</span><span class="kv-val">CraftLink.exe</span></li>
+            <li><span class="kv-key">版本</span><span class="kv-val">v3.0.0（2026-09-18）</span></li>
+            <li><span class="kv-key">平台</span><span class="kv-val">Windows 10 / 11（64 位）</span></li>
+            <li><span class="kv-key">大小</span><span class="kv-val">约 12.4 MB（13,021,016 字节）</span></li>
+            <li><span class="kv-key">安装</span><span class="kv-val">免安装 · 放到任意文件夹双击运行</span></li>
+            <li><span class="kv-key">语言</span><span class="kv-val">中文 / English / 日本語</span></li>
+            <li><span class="kv-key">主题</span><span class="kv-val">暗色 / 亮色 / 跟随系统</span></li>
+          </ul>
+        </div>
+        <div>
+          <h3>校验信息</h3>
+          <!-- 发布新版本时同步更新下面三行（版本 / 字节数 / SHA-256），
+               校验脚本 optional/checksum/check-download.py 会核对本站点内的 exe，
+               忘了改就会报错：- 页面 SHA-256 与实际文件不一致 -->
+          <span class="hash-box">SHA-256: 0000000000000000000000000000000000000000000000000000000000000000
+大小(字节): 0
+版本: v0.0.0（示例）</span>
+          <p class="hero-note">
+            <b>每次更新版本这个值都会变</b>：新 exe 覆盖上去之后，
+            SHA-256 与字节数都会不一样，页面上的这三行要一起改。
+          </p>
+          <p class="hero-note">
+            拿到文件后可以在 PowerShell 里核对：
+          </p>
+          <pre><code>Get-FileHash .\CraftLink.exe -Algorithm SHA256</code></pre>
+          <p class="hero-note">
+            算出来的值和上面一致，就说明文件在传输过程中没有被改动过。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 系统要求 ===================== -->
+  <section class="section" aria-labelledby="req-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">系统要求</span>
+        <h2 id="req-title">需要什么才能跑起来</h2>
+        <p>要求不高：一台能正常玩 Minecraft Java 版的 Windows 电脑就够了。</p>
+      </div>
+
+      <div class="card" data-reveal>
+        <table class="spec-table">
+          <caption>客户端运行环境</caption>
+          <thead>
+            <tr>
+              <th scope="col">项目</th>
+              <th scope="col">要求</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">操作系统</th>
+              <td>Windows 10 或 Windows 11（64 位）。CraftLink 客户端本身是 Windows 程序。</td>
+            </tr>
+            <tr>
+              <th scope="row">游戏</th>
+              <td>Minecraft <b>Java 版</b>（能用「对局域网开放」的版本即可）。Java 版以外的版本不支持。</td>
+            </tr>
+            <tr>
+              <th scope="row">运行库</th>
+              <td>不需要额外安装。exe 已经自带运行所需的一切，也不用装 Python。</td>
+            </tr>
+            <tr>
+              <th scope="row">网络</th>
+              <td>能正常上网即可，<b>不需要公网 IP</b>，也不需要改路由器或开放端口。</td>
+            </tr>
+            <tr>
+              <th scope="row">硬盘</th>
+              <td>几十 MB 空间（程序本体 + 日志文件）。</td>
+            </tr>
+            <tr>
+              <th scope="row">权限</th>
+              <td>普通用户权限即可，不需要管理员身份运行。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note" data-reveal>
+        <span class="note-title">关于 Minecraft 版本与整合包</span>
+        <p>
+          CraftLink 只转发字节、不解析游戏协议，所以它不限制 Minecraft 版本，也不要求两边装一样的模组 ——
+          能不能进得去，最终取决于游戏本身是否允许这个客户端加入。
+          目前的验证基线是 Java 版 1.20.1（含 Forge 环境），其他版本欢迎自己试，遇到问题告诉我们。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 下载常见问题 ===================== -->
+  <section class="section" aria-labelledby="dlfaq-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">下载常见问题</span>
+        <h2 id="dlfaq-title">下载和第一次运行时最容易卡住的几件事</h2>
+        <p>更多问题（怎么建房、怎么加入、主机身份是什么）在<a href="faq.html">常见问题页</a>。</p>
+      </div>
+
+      <div class="faq-list" data-reveal>
+        <details class="faq-item" id="q-publisher">
+          <summary>Windows 提示「未知发布者」怎么办？</summary>
+          <div class="faq-body">
+            <p>
+              这是正常现象。这是一个个人开发的开源项目，没有购买代码签名证书，
+              所以 Windows SmartScreen 会显示「未知发布者」。
+            </p>
+            <p>
+              你可以这样处理：点击提示框里的<b>「更多信息」</b> → <b>「仍要运行」</b>；
+              或者右键文件 → 属性 → 勾选「解除锁定」后再运行。
+            </p>
+            <p>
+              如果在意安全性，请先用上面的 SHA-256 校验值核对文件，
+              确认无误后再运行。校验值在文件发布前会保持留空。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-runtime">
+          <summary>需要安装运行库或 Python 吗？</summary>
+          <div class="faq-body">
+            <p>
+              不需要。CraftLink.exe 是打包好的单文件程序，运行需要的东西都在里面，
+              不用装 Python、不用装 .NET、不用装 Visual C++ 运行库。
+            </p>
+            <p>
+              如果双击后完全没反应，多半是被安全软件拦下了（见下一条），
+              而不是缺运行库。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-port">
+          <summary>需要开放端口 / 做端口映射吗？</summary>
+          <div class="faq-body">
+            <p>
+              <b>不需要。</b>不需要公网 IP，不用进路由器后台，也不用在 Windows 防火墙里放行任何入站端口。
+            </p>
+            <p>
+              数据是客户端主动连出去的，朋友的流量经中继转发进来 ——
+              你本机的 Minecraft 端口始终只对 <code>127.0.0.1</code> 开放。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-antivirus">
+          <summary>杀毒软件/浏览器报毒或拦截下载怎么办？</summary>
+          <div class="faq-body">
+            <p>
+              未签名的个人项目被启发式引擎误报很常见。请只从本页给出的官方入口下载，
+              不要用来路不明的转载版本。
+            </p>
+            <p>
+              临时放行前，建议先核对 SHA-256；核对一致后把程序所在文件夹加入白名单，
+              如果仍然不放心，就先别运行。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-install">
+          <summary>要装到 Minecraft 目录里吗？</summary>
+          <div class="faq-body">
+            <p>
+              不用。放在桌面、D 盘任意文件夹都可以，它不会读写你的 <code>mods</code> 目录，
+              也不会修改游戏文件。不想要了，直接删掉 exe 就行。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-verify">
+          <summary>怎么确认下载到的文件没被动过？</summary>
+          <div class="faq-body">
+            <p>在文件所在目录打开 PowerShell，运行：</p>
+            <pre><code>Get-FileHash .\CraftLink.exe -Algorithm SHA256</code></pre>
+            <p>
+              把输出里的哈希和本页的校验值逐位对比。校验值目前是占位状态，
+              文件正式发布后会同步更新。
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 下一步 ===================== -->
+  <section class="section section-tight" aria-labelledby="next-title">
+    <div class="wrap">
+      <div class="grid grid-2">
+        <article class="card" data-reveal>
+          <h3 id="next-title">下载完先看怎么开世界</h3>
+          <p>房主开局域网、填房间名、朋友连 <code>127.0.0.1:端口</code> —— 完整三步在首页和常见问题里都有。</p>
+          <p><a class="link-more" href="faq.html">查看常见问题 →</a></p>
+        </article>
+        <article class="card" data-reveal>
+          <h3>想先了解它怎么工作</h3>
+          <p>中继转发、房间与主机位置、为什么不解析游戏协议 —— 技术路线页都有图解。</p>
+          <p><a class="link-more" href="tech.html">阅读技术路线 →</a></p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h4>CraftLink · 方块联机</h4>
+        <p>让你的 Minecraft 局域网世界，被朋友用一个房间名接进来。</p>
+        <p><span class="tag tag-plain">v3.0.0</span></p>
+      </div>
+      <div class="footer-col">
+        <h4>页面</h4>
+        <ul class="footer-links">
+          <li><a href="index.html">首页</a></li>
+          <li><a href="tech.html">技术路线</a></li>
+          <li><a href="download.html">下载</a></li>
+          <li><a href="faq.html">常见问题</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>关于</h4>
+        <ul class="footer-links">
+          <li>作者的第一款开源作品（GitHub 主页稍后放出）</li>
+          <li>规划中：STUN 直连 / AUTO 调度，敬请期待</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">© 2026 CraftLink（方块联机）</p>
+      <span class="footer-sep" aria-hidden="true"></span>
+      <p class="icp">你的备案号（占位）</p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+# ============================================================
+#  只给 `nginx -t` 用的测试主配置（不监听、不常驻、不影响正在跑的 nginx）
+# ============================================================
+#
+#  为什么需要它：nginx 的 `-t` 是"整份配置一起检查"，而候选配置在改名之前
+#  还不是正式配置的一部分。这里用一个独立的、最小的 http 块把**候选目录**
+#  单独引进来，就能在动真配置之前把语法、include、证书、端口冲突全部验一遍。
+#
+#  占位符（由 panel-agent.sh 用 sed 替换）：
+#      @CANDIDATE_DIR@  候选配置目录（里面是 panel-server.conf 等）
+#      @MIME_TYPES@     mime.types 的路径
+#      @TEST_PREFIX@    临时 prefix（放 pid / 临时目录，避免写到正式路径）
+# ============================================================
+
+error_log  stderr  warn;
+pid        @TEST_PREFIX@/nginx-test.pid;
+
+worker_processes  1;
+
+events {
+    worker_connections 64;
+}
+
+http {
+    include       @MIME_TYPES@;
+    default_type  application/octet-stream;
+    access_log    off;
+
+    client_body_temp_path @TEST_PREFIX@/body;
+    proxy_temp_path       @TEST_PREFIX@/proxy;
+    fastcgi_temp_path     @TEST_PREFIX@/fastcgi;
+    uwsgi_temp_path       @TEST_PREFIX@/uwsgi;
+    scgi_temp_path        @TEST_PREFIX@/scgi;
+
+    include @CANDIDATE_DIR@/*.conf;
+}

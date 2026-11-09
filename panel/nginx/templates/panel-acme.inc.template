@@ -1,0 +1,6 @@
+# ACME（Let's Encrypt HTTP-01）校验目录
+#
+# certbot 的 --webroot 会把校验文件写进 {{ACME_ROOT}}/.well-known/acme-challenge/，
+# 这里直接由 nginx 从磁盘回，**不经过 PHP**（面板打不开也要能续期），
+# 也不受安全入口 / 域名绑定 / HTTPS 跳转的影响。
+{{ACME_BLOCK}}

@@ -1,0 +1,2 @@
+ok=False
+message='房间里还有玩家，不能删除（请先让玩家离开） [DELETE_ROOM_BUSY]'

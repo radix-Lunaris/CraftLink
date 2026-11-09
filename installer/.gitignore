@@ -1,0 +1,10 @@
+# installer/ 下的构建产物（一律不进版本库）
+#
+#   build/            Builder 的输出：params.iss / staging/ / setup-icon.ico / out/
+#   builder/build/    PyInstaller 打 CraftLink-Builder 的中间目录
+#   builder/dist/     CraftLink-Builder.exe
+build/
+builder/build/
+builder/dist/
+__pycache__/
+*.pyc

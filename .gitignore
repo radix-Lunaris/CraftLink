@@ -1,0 +1,92 @@
+# ============================================================================
+#  ★ 真实凭据 —— 永远不许进版本库
+# ============================================================================
+#
+# v3.9.15 的教训：真实凭据被明文写进了交付文件，而交付文件是会被复制、外传、
+# 提交、贴到工单里的。`.env` 是服务器上唯一存真实值的地方，它必须只存在于
+# 服务器。
+#
+# `.env.example` **不**在这里 —— 它只有占位符，本来就是要交付的。
+.env
+*.env
+!.env.example
+
+# 服务器上的本地配置（数据库密码在这里，永远不覆盖、不提交）
+panel/config.php
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 日志与运行时状态
+logs/
+status/
+*.log
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# 打包产物（构建出来的 zip 不进版本库）
+*.zip
+
+# 面板设置的**备份**文件（运行期生成：面板名/安全入口/ICP/logo 文件名…）
+# 每个部署各自一份，不进版本库（DB 才是主存储，见 docs/PANEL-SETTINGS.md）
+config/panel-settings.json
+config/panel-settings.json.tmp
+
+# 面板上传（logo 等运行期文件）
+data/panel-uploads/
+
+# ---- M4：证书 / 队列 / 急救覆盖（全是运行期产物，且含私钥）----
+#
+# 证书目录里有：装好的证书与私钥（0600）、certbot 的账号与续期状态、
+# 根代理的队列 / 日志 / 心跳、证书状态 status.json。**一个都不进版本库**；
+# 它对应 docker-compose.yml 里 ${MCLINK_PANEL_CERT_DIR:-./data/panel-certs} 那条卷。
+data/panel-certs/
+panel/config/panel-certs/
+
+# 急救覆盖文件（root 的 mclink 管理台在数据库写不进去时写；见 docs/M4-SSL-DOMAIN.md §3.1）
+config/panel-emergency-overrides.json
+config/panel-emergency-overrides.json.tmp
+
+# 渲染出来的 nginx 配置（仓库 / 开发布局下会落在这里；容器里是 /etc/nginx/mclink-servers）
+panel/nginx/live/
+
+# panel-apply.sh 按「面板设置」生成的端口 override（每台机器不一样）
+panel/docker-compose.panel-ssl.yml
+
+# ---- M8 / D13：可选组件（optional/）----
+#
+# `optional/` 本身**要进版本库**（留档：早期官网 + 下载哈希校验，见
+# optional/README.md），但它是"自己搭站"用的，产生的二进制不进库。
+# 主交付包里没有 optional/ —— 排除规则在 scripts/make_build.py。
+optional/site/download/*.exe
+optional/site/download/*.zip
+optional/site/download/*.7z
+
+# 留档页面的本地预览 / 编辑器临时文件
+optional/site/**/*.orig
+optional/site/**/*.bak
+
+# ---- 真实客户端日志（永远不许进版本库）----
+#
+# v3.9.21（开源发布前）：`docs/client-logs/` 里原来有 9 份**真机**日志 ——
+# 里面有客户端公网 IP、client_id、账号/房间名、真实中继域名。它们已经移出
+# 仓库，只留下 `docs/client-logs/README.md`（脱敏方法 + 合成示例）。
+#
+# 这条规则是**第二道保险**：谁再往里拷一份真日志，git 也不会收；
+# `tests/real_identifiers_guard_test.py` 按"跟踪树"扫描（= 跳过被忽略的文件），
+# 所以这些日志不会让回归网变红 —— 但它们也**不该**留在工作区里，打包前清掉。
+docs/client-logs/*.txt
+docs/client-logs/*.log
+
+# 测试跑出来的原始输出（里面会带真机 peer IP / 端口，见同一轮的处理）
+tests/*.out
+

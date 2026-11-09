@@ -1,0 +1,12 @@
+# 面板的对外路径（HTTP 与 HTTPS 两个 server 共用这一份）
+#
+# 渲染顺序有讲究：
+#   1. ACME 校验目录用 `^~` 前缀匹配 —— 它一旦命中，nginx 就不再走后面的
+#      正则 location，所以明文校验不会被下面的 deny / PHP 规则吃掉；
+#   2. 安全入口（`{{ENTRY_NOTE}}`）：入口内 `rewrite ... last` 把前缀剥掉，
+#      重新匹配到下面的 PHP / 静态规则；入口外直接返回未认证返回码；
+#   3. 真正的处理规则在 panel-backend.inc 里（HTTP / HTTPS / 急救三份共用）。
+{{ACME_BLOCK}}
+{{ENTRY_BLOCK}}
+{{LOGIN_COMPAT}}
+include {{SERVER_DIR}}/panel-backend.inc;

@@ -1,0 +1,52 @@
+# ============================================================
+#  CraftLink 面板 —— 主服务（由「面板设置」自动生成，请勿手改）
+#
+#  改这份配置的正确做法：
+#    * 面板 →「面板设置」改完保存（root 代理会在 2 秒内重新渲染 + nginx -t + reload）
+#    * 或者 SSH：mclink render / mclink reset-entry / mclink unbind-domain
+#
+#  生成时间 : {{GENERATED_AT}}
+#  面板版本 : {{PANEL_VERSION}}
+#  绑定域名 : {{BOUND_DOMAIN_NOTE}}
+#  安全入口 : {{ENTRY_NOTE}}
+#  未认证码 : {{UNAUTH_CODE}}
+#  证书     : {{TLS_NOTE}}
+#
+#  端口：容器内 HTTP {{HTTP_PORT}} / HTTPS {{HTTPS_PORT}} / 急救 {{RESCUE_PORT}}
+#        宿主机上发布成什么地址由 compose 决定（listen_ip:listen_port → {{HTTP_PORT}}）。
+# ============================================================
+
+# ---- 主 HTTP 服务 ----------------------------------------------------------
+server {
+    listen 0.0.0.0:{{HTTP_PORT}};
+    server_name {{SERVER_NAME}};
+
+{{SERVER_COMMON}}
+{{HOST_GUARD}}
+{{ENTRY_GUARD}}
+{{HTTP_MODE_INCLUDE}}
+}
+
+{{HTTPS_SERVER_BLOCK}}
+
+# ---- 急救入口（本机）-------------------------------------------------------
+# 这份 server 块**故意**什么都不判：没有安全入口、没有域名绑定、不跳 HTTPS。
+# 它只通过宿主机的 127.0.0.1:{{RESCUE_PORT}} 发布（公网到不了），所以
+# "安全入口写错了 / 域名绑错了 / 证书坏了"三种自锁都能从这里进去改回来。
+server {
+    listen 0.0.0.0:{{RESCUE_PORT}};
+    server_name _;
+
+    # 告诉后端"这个请求是从急救入口进来的"（PHP 据此跳过域名判定）。
+    # 变量只在这里 set：主服务的两个 server 块里它是空的。
+    set $mclink_rescue 1;
+
+{{SERVER_COMMON}}
+    location = /healthz {
+        access_log off;
+        default_type "text/plain";
+        return 200 "ok\n";
+    }
+
+    include {{SERVER_DIR}}/panel-rescue-locations.inc;
+}

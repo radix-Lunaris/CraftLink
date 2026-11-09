@@ -1,0 +1,46 @@
+{
+  "_comment": [
+    "CraftLink-Builder 的 --non-interactive 输入示例（CI / 批量构建用）。",
+    "",
+    "用法：",
+    "  CraftLink-Builder.exe --non-interactive --json builder-input.example.json",
+    "  python3 installer/builder/craftlink_builder.py --non-interactive --json installer/examples/builder-input.example.json",
+    "",
+    "★ server_host / server_port 故意留空：这就是 D10 的默认状态 —— 客户端不含",
+    "  任何内置服务器，用户首次运行自己填。要固化一个默认地址，就填域名/IP + 端口",
+    "  （只填域名 = 报错，端口必须是 1-65535）。",
+    "",
+    "路径都相对于仓库根；out 默认 installer/build（.gitignore 里已忽略）。"
+  ],
+
+  "app_name": "CraftLink",
+  "server_host": "",
+  "server_port": 0,
+  "update_url": "",
+
+  "logo": "client/mclink/assets/app.png",
+  "icon": "",
+
+  "default_install_dir": "",
+  "default_data_dir": "",
+
+  "out": "installer/build",
+  "exe": "client/dist/CraftLink.exe",
+  "console_exe": "client/dist/CraftLink-console.exe",
+
+  "app_version": "",
+  "app_publisher": "CraftLink",
+  "publisher_url": "",
+  "app_id": "",
+  "output_basename": "CraftLink-Setup",
+
+  "license_file": "LICENSE",
+  "language_file": "",
+  "language_name": "",
+
+  "data_dir_page": true,
+  "desktop_icon_task": true,
+  "env_var_task": true,
+
+  "texts": {}
+}

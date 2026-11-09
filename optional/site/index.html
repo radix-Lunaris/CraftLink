@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<!-- 可选组件（optional/site，不随主交付发布）：以下页面是我们早期官网的原样留档，
+     仅作参考实现。里面的版本号 / 日期 / 字节数 / 备案号都是占位或过时内容，
+     请按 optional/site/README.md 重新填入你自己的真实信息。 -->
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CraftLink 方块联机 —— 让你的 Minecraft 世界和朋友一起玩</title>
+<meta name="description" content="CraftLink（方块联机）是一个免安装的 Windows 客户端：房主在 Minecraft 里「对局域网开放」，客户端把世界经中继服务器转发出去，朋友用房间名加入并连接 127.0.0.1 即可联机。">
+<meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
+<script>
+/* 尽早套用已保存的主题，避免刷新时闪白/闪黑（无 JS 时跟随系统） */
+(function () {
+  try {
+    var t = window.localStorage.getItem('craftlink-theme');
+    if (t === 'light' || t === 'dark') {
+      document.documentElement.setAttribute('data-theme', t);
+    }
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" role="img" aria-label="CraftLink 方块标志" focusable="false">
+        <rect width="32" height="32" rx="8" fill="url(#clBrand)"></rect>
+        <defs>
+          <linearGradient id="clBrand" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#6f9bff"></stop>
+            <stop offset="1" stop-color="#3ddc84"></stop>
+          </linearGradient>
+        </defs>
+        <g fill="#ffffff" opacity="0.94">
+          <rect x="6" y="6" width="8" height="8" rx="1.6"></rect>
+          <rect x="18" y="6" width="8" height="8" rx="1.6" opacity="0.72"></rect>
+          <rect x="6" y="18" width="8" height="8" rx="1.6" opacity="0.72"></rect>
+        </g>
+        <rect x="18" y="18" width="8" height="8" rx="1.6" fill="#0f1726"></rect>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">CraftLink</span>
+        <span class="brand-sub">方块联机</span>
+      </span>
+    </a>
+
+    <nav class="site-nav" id="site-nav" data-nav aria-label="主导航">
+      <a href="index.html" aria-current="page">首页</a>
+      <a href="tech.html">技术路线</a>
+      <a href="download.html">下载</a>
+      <a href="faq.html">常见问题</a>
+    </nav>
+
+    <div class="header-tools">
+      <button class="icon-btn theme-toggle" type="button" data-theme-toggle data-pref="system" aria-label="主题：跟随系统" title="主题：跟随系统">
+        <svg class="icon icon-light" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.1"></circle>
+          <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"></path>
+        </svg>
+        <svg class="icon icon-dark" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7Z"></path>
+        </svg>
+        <svg class="icon icon-system" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.8" y="4.2" width="18.4" height="12.4" rx="2"></rect>
+          <path d="M9 20.2h6M12 16.6v3.6"></path>
+        </svg>
+      </button>
+      <button class="icon-btn nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-controls="site-nav" aria-label="展开导航菜单">
+        <svg class="icon icon-menu" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16"></path>
+        </svg>
+        <svg class="icon icon-close" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6L6 18"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ===================== Hero ===================== -->
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <p class="pill"><span class="dot" aria-hidden="true"></span>客户端 v3.0.0 · 2026-09 · Windows 单文件免安装</p>
+      <h1>把你的 Minecraft 世界，<br><span class="swatch">一条链接</span>交给朋友。</h1>
+      <p class="hero-lede">
+        CraftLink（方块联机）让「单人存档」变成可以随时开黑的联机世界：
+        你在游戏里点一下<b>「对局域网开放」</b>，客户端把这个世界经中继服务器转发出去，
+        朋友只用一个<b>房间名</b>就能进来 —— 不用内网穿透，不用改路由器，不用公网 IP。
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="download.html#download">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3.6v10.8M7.4 10l4.6 4.6L16.6 10M4.6 20.4h14.8"></path>
+          </svg>
+          下载 CraftLink
+        </a>
+        <a class="btn btn-ghost" href="tech.html">看技术路线</a>
+      </div>
+      <p class="hero-note">约 12.4 MB 单文件 exe，双击即用；支持中文 / English / 日本語，暗色 / 亮色主题随意切。</p>
+    </div>
+  </section>
+
+  <!-- ===================== 三个特性 ===================== -->
+  <section class="section" aria-labelledby="features-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">为什么用它</span>
+        <h2 id="features-title">三件事，做得刚刚好</h2>
+        <p>不做账号体系，不做启动器，不做模组管理 —— CraftLink 只负责一件事：把你已经开好的局域网世界，安全地送到朋友那台电脑上。</p>
+      </div>
+
+      <div class="grid grid-3">
+        <article class="card" data-reveal>
+          <span class="card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3.2 20 7.4v9.2L12 20.8 4 16.6V7.4Z"></path>
+              <path d="M12 3.2v8.6l8 4.8M12 11.8 4 16.6"></path>
+            </svg>
+          </span>
+          <h3>免安装，单文件</h3>
+          <p>
+            一个约 12.4 MB 的 <code>CraftLink.exe</code>，解压到哪都能跑，
+            不写注册表、不装运行库、不留后台服务。删掉文件就是卸载干净。
+          </p>
+          <ul class="card-list">
+            <li>Windows 10 / 11 直接双击运行</li>
+            <li>不占用 Minecraft 的 mods 目录，也不改游戏文件</li>
+          </ul>
+        </article>
+
+        <article class="card" data-reveal>
+          <span class="card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3.2" y="5" width="17.6" height="14" rx="2.4"></rect>
+              <path d="M7.2 10h2.6M13.4 10h3.4M7.2 14h9.6"></path>
+            </svg>
+          </span>
+          <h3>中文房间名</h3>
+          <p>
+            房间用<b>房间名</b>标识，中文、英文、空格都可以，叫「周末生存」的房间和叫
+            <code>weekend</code> 的房间一样好记。同名就是同一个房间，程序内部自己生成房间 ID。
+          </p>
+          <ul class="card-list">
+            <li>不用记 IP、端口和一大串随机码</li>
+            <li>房间名就是口令，说一声朋友就能进</li>
+          </ul>
+        </article>
+
+        <article class="card" data-reveal>
+          <span class="card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="8.6" r="3.2"></circle>
+              <path d="M3.4 19.6c0-2.9 2.5-4.8 5.6-4.8s5.6 1.9 5.6 4.8"></path>
+              <path d="M16.2 6.2a3 3 0 0 1 0 5.6M17.6 19.6c0-2-.6-3.5-1.6-4.5 2.6.2 4.6 1.9 4.6 4.5"></path>
+            </svg>
+          </span>
+          <h3>朋友不用装同样的东西</h3>
+          <p>
+            房主在 Windows 上跑客户端；朋友那边只要装一个自己的 CraftLink（同样是这个 exe），
+            就能在 Minecraft 里连 <code>127.0.0.1:端口</code> 进入世界。
+          </p>
+          <ul class="card-list">
+            <li>不要求双方版本、模组、整合包完全一致（以游戏本身能连为准）</li>
+            <li>多平台的朋友都能接进来，房主的操作始终只有一步</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 三步开玩 ===================== -->
+  <section class="section" aria-labelledby="steps-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">三步开玩</span>
+        <h2 id="steps-title">从开世界到朋友进服，大约一分钟</h2>
+        <p>下面是完整流程。真正的点击只有三下：游戏里开局域网、客户端开始连接、朋友在游戏里加入服务器。</p>
+      </div>
+
+      <ol class="steps" data-reveal>
+        <li>
+          <h3>房主：在游戏里开局域网</h3>
+          <p>进入你的存档，按 <kbd>Esc</kbd> → <b>「对局域网开放」</b> → 记下游戏给出的端口号。</p>
+          <p class="step-meta">Minecraft Java 版 · 单人存档即可</p>
+        </li>
+        <li>
+          <h3>房主：客户端开始连接</h3>
+          <p>打开 CraftLink，选<b>主机</b>、填一个房间名（中文也行）、填刚才的游戏端口，点「开始连接」。</p>
+          <p class="step-meta">客户端 → 中继服务器 → 隧道就绪</p>
+        </li>
+        <li>
+          <h3>朋友：用房间名进来</h3>
+          <p>朋友打开 CraftLink 选<b>玩家</b>、填同一个房间名，然后在 Minecraft 里连接 <code>127.0.0.1:端口</code>。</p>
+          <p class="step-meta">同名即同房间 · 不需要公网 IP</p>
+        </li>
+      </ol>
+
+      <div class="note note-soon" data-reveal>
+        <span class="note-title">房间里的「主机位置」</span>
+        <p>
+          每个房间有一个 <b>host（主机）</b>位置：谁开世界谁持有它，Minecraft 的连接就绑定在这个位置上。
+          在客户端按「停止开服」不会释放这个位置 —— 想换人开世界，需要在客户端点
+          <b>「释放主机身份」</b>，位置才会空出来给下一个人。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 版本与更新摘要 ===================== -->
+  <section class="section" aria-labelledby="version-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">版本</span>
+        <h2 id="version-title">v3.0.0 · 2026-09-18</h2>
+        <p>当前发布版本。下载入口与校验信息见<a class="link-more" href="download.html">下载页 →</a></p>
+      </div>
+
+      <div class="card version-card" data-reveal>
+        <div>
+          <p><span class="tag">v3.0.0</span> <span class="tag tag-plain">稳定版</span></p>
+          <ul class="kv">
+            <li><span class="kv-key">客户端</span><span class="kv-val">CraftLink.exe（约 12.4 MB，免安装）</span></li>
+            <li><span class="kv-key">标识方式</span><span class="kv-val">房间名（中文 / 英文 / 空格）</span></li>
+            <li><span class="kv-key">语言</span><span class="kv-val">中文 / English / 日本語</span></li>
+            <li><span class="kv-key">主题</span><span class="kv-val">暗色 / 亮色 / 跟随系统</span></li>
+            <li><span class="kv-key">数据通路</span><span class="kv-val">原始 TCP 字节转发</span></li>
+          </ul>
+        </div>
+        <div>
+          <h3>这一版的更新摘要</h3>
+          <ul class="log-list">
+            <li>
+              <span class="log-when">v3.0.0</span>
+              <span class="log-what"><strong>网络诊断（新）</strong>新增「网络诊断」卡片：一键测出本机 NAT 类型、公网映射和 STUN 服务器延迟，并说明能不能直连、不能的话为什么。只读检测，不影响正在进行的连接。</span>
+            </li>
+            <li>
+              <span class="log-when">v2.2.0</span>
+              <span class="log-what"><strong>房间 / 主机位置模型</strong>房间名直接当房间标识，同名即同房间；主机位置可显式释放，换人开世界不再需要重开房间。</span>
+            </li>
+            <li>
+              <span class="log-when">v2.2.0</span>
+              <span class="log-what"><strong>界面语言与主题</strong>新增 日本語，中 / 英 / 日三语切换；新增暗色 / 亮色 / 跟随系统主题。</span>
+            </li>
+            <li>
+              <span class="log-when">v2.2.0</span>
+              <span class="log-what"><strong>客户端更名</strong>原名 MC-Link，现更名 CraftLink（方块联机），中继协议保持兼容。</span>
+            </li>
+            <li>
+              <span class="log-when">后续</span>
+              <span class="log-what"><strong>STUN 直连与 AUTO 调度</strong>规划中，敬请期待。</span>
+            </li>
+          </ul>
+          <p class="hero-note">完整更新记录会随下载页一起放出；没有把握的数字我们不会写在这里。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 下一步 ===================== -->
+  <section class="section section-tight" aria-labelledby="next-title">
+    <div class="wrap">
+      <div class="grid grid-2">
+        <article class="card" data-reveal>
+          <h3 id="next-title">想先搞懂原理？</h3>
+          <p>为什么不用端口映射、中继到底转发了什么、客户端和中继各干什么活 —— 技术路线页把这张图画清楚了。</p>
+          <p><a class="link-more" href="tech.html">阅读技术路线 →</a></p>
+        </article>
+        <article class="card" data-reveal>
+          <h3>只想赶紧开黑？</h3>
+          <p>下载页有系统要求、文件名、常见安全提示，以及「Windows 提示未知发布者怎么办」这类问题的答案。</p>
+          <p><a class="link-more" href="download.html">去下载页 →</a></p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h4>CraftLink · 方块联机</h4>
+        <p>让你的 Minecraft 局域网世界，被朋友用一个房间名接进来。</p>
+        <p><span class="tag tag-plain">v3.0.0</span></p>
+      </div>
+      <div class="footer-col">
+        <h4>页面</h4>
+        <ul class="footer-links">
+          <li><a href="index.html">首页</a></li>
+          <li><a href="tech.html">技术路线</a></li>
+          <li><a href="download.html">下载</a></li>
+          <li><a href="faq.html">常见问题</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>关于</h4>
+        <ul class="footer-links">
+          <li>作者的第一款开源作品（GitHub 主页稍后放出）</li>
+          <li>规划中：STUN 直连 / AUTO 调度，敬请期待</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">© 2026 CraftLink（方块联机）</p>
+      <span class="footer-sep" aria-hidden="true"></span>
+      <p class="icp">你的备案号（占位）</p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

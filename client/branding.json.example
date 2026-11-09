@@ -1,0 +1,25 @@
+{
+  "_comment": [
+    "CraftLink 客户端品牌配置（示例）。",
+    "",
+    "用法：把本文件复制成 branding.json，放在**程序目录**里（CraftLink.exe 旁边；",
+    "源码运行时是 client/ 目录），然后按需要改字段。安装器负责在安装时写入这个",
+    "文件（详见 docs/CLIENT-BRANDING.md）。",
+    "",
+    "查找顺序：MCLINK_BRANDING_FILE 环境变量 > 程序目录/branding.json > 打进 EXE 的副本。",
+    "文件不存在 = 全部使用默认值（app_name=CraftLink、logo=内置图标、",
+    "default_server_host 为空、default_server_port 未设置、update_url 为空）。",
+    "",
+    "所有字段都是可选的；类型不对或找不到文件的那一项退回默认值，并在日志里记一条",
+    "警告 —— 客户端不会因为品牌文件写错而起不来。",
+    "",
+    "★ 客户端**不含任何真实服务器地址**：default_server_host/port 留空时，",
+    "用户首次运行会看到填写引导，填完记忆在用户数据目录里。"
+  ],
+
+  "app_name": "CraftLink",
+  "logo_file": "",
+  "default_server_host": "",
+  "default_server_port": 0,
+  "update_url": ""
+}

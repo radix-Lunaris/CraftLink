@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<!-- 可选组件（optional/site，不随主交付发布）：以下页面是我们早期官网的原样留档，
+     仅作参考实现。里面的版本号 / 日期 / 字节数 / 备案号都是占位或过时内容，
+     请按 optional/site/README.md 重新填入你自己的真实信息。 -->
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>技术路线 —— CraftLink 方块联机</title>
+<meta name="description" content="CraftLink 技术路线：中继转发原理、为什么不用端口映射、房间与主机位置模型、原始 TCP 数据通路不解析 Minecraft 协议、客户端与服务端分工，以及规划中的 STUN 直连与 AUTO 调度。">
+<meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
+<script>
+/* 尽早套用已保存的主题，避免刷新时闪白/闪黑（无 JS 时跟随系统） */
+(function () {
+  try {
+    var t = window.localStorage.getItem('craftlink-theme');
+    if (t === 'light' || t === 'dark') {
+      document.documentElement.setAttribute('data-theme', t);
+    }
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" role="img" aria-label="CraftLink 方块标志" focusable="false">
+        <rect width="32" height="32" rx="8" fill="url(#clBrand)"></rect>
+        <defs>
+          <linearGradient id="clBrand" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#6f9bff"></stop>
+            <stop offset="1" stop-color="#3ddc84"></stop>
+          </linearGradient>
+        </defs>
+        <g fill="#ffffff" opacity="0.94">
+          <rect x="6" y="6" width="8" height="8" rx="1.6"></rect>
+          <rect x="18" y="6" width="8" height="8" rx="1.6" opacity="0.72"></rect>
+          <rect x="6" y="18" width="8" height="8" rx="1.6" opacity="0.72"></rect>
+        </g>
+        <rect x="18" y="18" width="8" height="8" rx="1.6" fill="#0f1726"></rect>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">CraftLink</span>
+        <span class="brand-sub">方块联机</span>
+      </span>
+    </a>
+
+    <nav class="site-nav" id="site-nav" data-nav aria-label="主导航">
+      <a href="index.html">首页</a>
+      <a href="tech.html" aria-current="page">技术路线</a>
+      <a href="download.html">下载</a>
+      <a href="faq.html">常见问题</a>
+    </nav>
+
+    <div class="header-tools">
+      <button class="icon-btn theme-toggle" type="button" data-theme-toggle data-pref="system" aria-label="主题：跟随系统" title="主题：跟随系统">
+        <svg class="icon icon-light" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.1"></circle>
+          <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"></path>
+        </svg>
+        <svg class="icon icon-dark" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7Z"></path>
+        </svg>
+        <svg class="icon icon-system" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.8" y="4.2" width="18.4" height="12.4" rx="2"></rect>
+          <path d="M9 20.2h6M12 16.6v3.6"></path>
+        </svg>
+      </button>
+      <button class="icon-btn nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-controls="site-nav" aria-label="展开导航菜单">
+        <svg class="icon icon-menu" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16"></path>
+        </svg>
+        <svg class="icon icon-close" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6L6 18"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <p class="pill"><span class="dot" aria-hidden="true"></span>技术路线 · Relay 模式</p>
+      <h1>一条中继链路，<br>把局域网世界接到朋友那边。</h1>
+      <p class="hero-lede">
+        CraftLink 的技术选择很朴素：<b>不解析游戏协议，不改造游戏，只把字节搬过去。</b>
+        这一页讲清楚它为什么这样做、数据具体怎么走，以及规划中的 STUN 直连会带来什么变化。
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="download.html">下载 CraftLink</a>
+        <a class="btn btn-ghost" href="faq.html">先看常见问题</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 1. 原理 ===================== -->
+  <section class="section" aria-labelledby="how-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">01 · 中继转发原理</span>
+        <h2 id="how-title">房主的局域网上，多了一台「搬运工」</h2>
+        <p>
+          Minecraft 的「对局域网开放」只在本机 <code>127.0.0.1</code> 上开了一个端口，全世界只有这台电脑能连。
+          CraftLink 客户端把发往这个端口的字节读出来，交给中继服务器，再从中继取回朋友发来的字节写回游戏 ——
+          游戏全程以为自己在跟本机的一个客户端说话。
+        </p>
+      </div>
+
+      <div class="flow" data-reveal>
+        <div class="flow-row">
+            <div class="flow-box">
+            <span class="flow-title">房主的电脑</span>
+            <span class="flow-sub">Minecraft Java 版<br>「对局域网开放」→ 本机端口</span>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">
+          <svg class="flow-arrow-tip" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 6h8M6.6 2.6 10 6l-3.4 3.4"></path></svg>
+          <span class="flow-arrow-label">本机 127.0.0.1</span>
+        </span>
+        <div class="flow-box">
+          <span class="flow-title">CraftLink 客户端（主机）</span>
+          <span class="flow-sub">读游戏字节 → 上行；<br>取回朋友字节 → 写回游戏</span>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">
+          <svg class="flow-arrow-tip" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 6h8M6.6 2.6 10 6l-3.4 3.4"></path></svg>
+          <span class="flow-arrow-label">原始 TCP</span>
+        </span>
+        <div class="flow-box is-relay">
+          <span class="flow-title">中继服务器</span>
+          <span class="flow-sub">房间 + 主机位置 + 隧道池<br>只转发字节，不看内容</span>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">
+          <svg class="flow-arrow-tip" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 6h8M6.6 2.6 10 6l-3.4 3.4"></path></svg>
+          <span class="flow-arrow-label">原始 TCP</span>
+        </span>
+        <div class="flow-box">
+          <span class="flow-title">CraftLink 客户端（玩家）</span>
+          <span class="flow-sub">在本机开一个本地端口，<br>把字节原样转给 Minecraft</span>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">
+          <svg class="flow-arrow-tip" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 6h8M6.6 2.6 10 6l-3.4 3.4"></path></svg>
+          <span class="flow-arrow-label">127.0.0.1:端口</span>
+        </span>
+        <div class="flow-box is-game">
+          <span class="flow-title">朋友那边</span>
+          <span class="flow-sub">Minecraft 里<br>连接 127.0.0.1:端口</span>
+        </div>
+      </div>
+      </div>
+
+      <div class="grid grid-2">
+        <article class="card" data-reveal>
+          <h3>一次连接的三个动作</h3>
+          <ol>
+            <li>房主开世界 → 客户端与中继建立<b>主机隧道</b>，登记房间。</li>
+            <li>朋友加入 → 客户端与中继建立<b>玩家隧道</b>，中继把两条隧道对接起来。</li>
+            <li>对接完成后，两个方向都只是<b>搬运字节</b>，直到有人断开。</li>
+          </ol>
+        </article>
+        <article class="card" data-reveal>
+          <h3>为什么这样最省事</h3>
+          <ul>
+            <li>游戏版本、模组、整合包都不需要客户端理解 —— 它只搬字节。</li>
+            <li>Minecraft 那边永远是「连本机」，不需要任何额外设置。</li>
+            <li>游戏协议更新不影响中继，中继本身不需要跟着升级。</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 2. 为什么需要中继 ===================== -->
+  <section class="section" aria-labelledby="why-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">02 · 为什么需要中继</span>
+        <h2 id="why-title">因为大多数人没有公网 IP</h2>
+        <p>
+          局域网世界要给别人连，常规做法是端口映射或内网穿透。它们不是不能用，而是对普通玩家要求太高、
+          对网络环境太挑。中继把「让两边能互相看见」这件事，从玩家家里搬到了一台固定在线的服务器上。
+        </p>
+      </div>
+
+      <div class="grid grid-2">
+        <article class="card" data-reveal>
+          <h3>端口映射：要动的环节太多</h3>
+          <ul>
+            <li>需要运营商给到公网 IP —— 很多家庭宽带和校园网已经没有了。</li>
+            <li>需要进路由器后台改 NAT / 防火墙规则，普通玩家容易改坏。</li>
+            <li>需要把游戏端口直接暴露在公网上，谁都能扫到。</li>
+            <li>IP 一变、路由器一换，规则就得重配。</li>
+          </ul>
+        </article>
+        <article class="card" data-reveal>
+          <h3>中继：玩家这边零配置</h3>
+          <ul>
+            <li>房主和朋友都<b>不需要公网 IP</b>，也不需要路由器权限。</li>
+            <li>只有中继服务器需要一个公网地址，而它只需要一个出口。</li>
+            <li>房主的游戏端口始终留在本机，不对公网暴露。</li>
+            <li>跨校园网、跨运营商、跨地区都能用同一套流程。</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="note" data-reveal>
+        <span class="note-title">代价要说清楚</span>
+        <p>
+          走中继意味着数据多绕一跳，路径是「房主 → 中继 → 朋友」。所以体验取决于三方到中继的网络质量：
+          同城、同省的朋友体验接近直连；跨运营商、跨地区会明显一些。中继本身只转发字节，
+          它不做加速，也不会让原本很差的线路变好。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 3. 房间 / 主机位置 ===================== -->
+  <section class="section" aria-labelledby="room-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">03 · 房间与主机位置模型</span>
+        <h2 id="room-title">房间名是钥匙，主机位置是座位</h2>
+        <p>
+          这是 CraftLink 里最容易搞混、也最值得讲清楚的一对概念：
+          <b>房间</b>是大家一起待的地方，<b>主机位置（host）</b>是房间里唯一一个「连着 Minecraft 世界」的座位。
+        </p>
+      </div>
+
+      <div class="grid grid-2">
+        <article class="card" data-reveal>
+          <h3>房间（Room）</h3>
+          <ul>
+            <li>用<b>房间名</b>标识：中文、英文、空格都可以，同名就是同一个房间。</li>
+            <li>程序内部会自动生成一个房间 ID 来做实际标识，玩家不需要看到它。</li>
+            <li>房间的寿命绑定在成员的连接上：人都走了，房间自然就空了。</li>
+          </ul>
+        </article>
+        <article class="card" data-reveal>
+          <h3>主机位置（Host）</h3>
+          <ul>
+            <li>房间里唯一的位置，<b>先到先得</b>：谁先开世界谁持有。</li>
+            <li>Minecraft 的连接绑定在这个位置上，只有它能连到房主的游戏。</li>
+            <li>在客户端点<b>「停止开服」只释放世界，不释放位置</b>；想换人开世界，必须点<b>「释放主机身份」</b>。</li>
+            <li>持有者断线或关闭客户端时，位置会被回收，别人可以接手。</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="flow" data-reveal>
+        <div class="flow-row">
+            <div class="flow-box is-relay">
+            <span class="flow-title">房间「周末生存」</span>
+            <span class="flow-sub">房间 ID（内部生成）· 成员若干</span>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">
+          <svg class="flow-arrow-tip" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 6h8M6.6 2.6 10 6l-3.4 3.4"></path></svg>
+          <span class="flow-arrow-label">持有</span>
+        </span>
+        <div class="flow-box">
+          <span class="flow-title">主机位置 host × 1</span>
+          <span class="flow-sub">绑定房主的 Minecraft 世界</span>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">
+          <svg class="flow-arrow-tip" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 6h8M6.6 2.6 10 6l-3.4 3.4"></path></svg>
+          <span class="flow-arrow-label">一人一条</span>
+        </span>
+        <div class="flow-box">
+          <span class="flow-title">玩家隧道池</span>
+          <span class="flow-sub">每位玩家一条独立隧道，<br>互不干扰</span>
+        </div>
+      </div>
+      </div>
+
+      <div class="note note-warn" data-reveal>
+        <span class="note-title">世界关了，房间还在</span>
+        <p>
+          这是设计上的选择，不是 bug。「停止开服」只结束世界，房间和你的成员身份都还在 ——
+          这样你可以随时重新开一个世界接着玩，朋友不用重新加房间。要把位置让给别人，请点「释放主机身份」。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 4. 数据通路 ===================== -->
+  <section class="section" aria-labelledby="data-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">04 · 数据通路</span>
+        <h2 id="data-title">中继不解析 Minecraft 协议</h2>
+        <p>
+          从中继的视角看，房间里流动的就是一串字节。它不知道什么是登录包、什么是区块数据，
+          也永远不会去改一个字节 —— 这条通路是<b>原始 TCP</b>，双向透明。
+        </p>
+      </div>
+
+      <div class="card" data-reveal>
+        <table class="mini-table">
+          <caption class="lede">中继看得见什么、看不见什么</caption>
+          <thead>
+            <tr>
+              <th scope="col">层面</th>
+              <th scope="col">中继服务器</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">能看到</th>
+              <td>房间名、房间 ID、成员连接、主机位置状态、每条隧道的字节流量与在线情况。</td>
+            </tr>
+            <tr>
+              <th scope="row">不能看到</th>
+              <td>Minecraft 的包类型、玩家聊天、世界数据含义 —— 它不解析协议，拿到什么就转什么。</td>
+            </tr>
+            <tr>
+              <th scope="row">会不会改数据</th>
+              <td>不会。不重组、不拆包、不压缩、不重排，按收到的顺序原样转发。</td>
+            </tr>
+            <tr>
+              <th scope="row">控制信息怎么走</th>
+              <td>加入房间、主机状态这类控制信息走的是一条独立的控制连接，不会混进游戏数据里。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note" data-reveal>
+        <span class="note-title">这条通路是冻结的</span>
+        <p>
+          「只转发字节」不只是实现细节，而是这个项目刻意守住的边界：
+          它让中继对 Minecraft 版本、模组、整合包完全免疫，也让排错变得简单 ——
+          游戏连不上时，问题要么在客户端到中继这一段，要么在游戏本身，不会藏在中间那台服务器里。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 5. 分工 ===================== -->
+  <section class="section" aria-labelledby="split-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">05 · 客户端与服务端分工</span>
+        <h2 id="split-title">谁负责什么，一眼看清</h2>
+        <p>两边的职责几乎没有重叠：客户端负责「和游戏打交道」，服务端负责「让两边见上面」。</p>
+      </div>
+
+      <div class="grid grid-2">
+        <article class="card" data-reveal>
+          <h3>CraftLink 客户端（Windows 单文件）</h3>
+          <ul>
+            <li>读取本机 Minecraft 局域网的字节，并写回游戏。</li>
+            <li>和玩家那边的本地端口对接，让 Minecraft「连本机」。</li>
+            <li>房间的创建与加入、主机身份的申请与释放。</li>
+            <li>界面、语言（中 / 英 / 日）、主题（暗 / 亮 / 跟随系统）。</li>
+            <li>连接状态与日志，方便自己排查问题。</li>
+          </ul>
+        </article>
+        <article class="card" data-reveal>
+          <h3>中继服务端</h3>
+          <ul>
+            <li>维护房间表与房间内的主机位置（先到先得）。</li>
+            <li>按房间名把两边配对，建立一人一条的隧道。</li>
+            <li>对接完成后只做字节转发，不做任何协议处理。</li>
+            <li>成员离开、连接断开时回收位置与隧道。</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 6. 规划 ===================== -->
+  <section class="section" aria-labelledby="roadmap-title">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">06 · 规划中</span>
+        <h2 id="roadmap-title">STUN 直连与 AUTO 调度：敬请期待</h2>
+        <p>
+          中继路线会一直保留 —— 它是「一定能连上」的那条路。在这之上，我们计划再加一条更近的路。
+        </p>
+      </div>
+
+      <div class="grid grid-2">
+        <article class="card" data-reveal>
+          <h3>STUN 直连 <span class="tag tag-plain">敬请期待</span></h3>
+          <p>
+            借助 STUN 探测双方的可达地址，让数据在两边之间直连，不再绕经中继。
+            同城、同省的朋友有机会拿到更短的路径。
+          </p>
+          <ul class="card-list">
+            <li>仅 STUN，不涉及任何需要改路由器的操作</li>
+            <li>打洞失败必须能自动回落到中继，不允许出现「以前能连、现在连不上」</li>
+          </ul>
+        </article>
+        <article class="card" data-reveal>
+          <h3>AUTO 调度 <span class="tag tag-plain">敬请期待</span></h3>
+          <p>
+            由客户端自动判断该走直连还是中继，玩家只需要点一次「开始连接」。
+            现在这个开关是锁着的：没有把握稳定之前，不会放出来给玩家踩坑。
+          </p>
+          <ul class="card-list">
+            <li>不做假实现、不写「即将上线」的具体日期</li>
+            <li>路线确定后会在下载页与更新摘要里说明</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="note note-soon" data-reveal>
+        <span class="note-title">关于实测数据</span>
+        <p>
+          我们不在这里写「延迟多少毫秒」「能带多少人」这类数字。网络质量取决于三方之间的实际线路，
+          写一个固定数字只会误导人。定性地说：<b>同城、同省的朋友体验接近直连；
+          跨运营商、跨地区会有明显绕路感。</b>真实的对比数据会在有稳定测试环境后再公开。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="wrap">
+      <div class="grid grid-2">
+        <article class="card" data-reveal>
+          <h3>准备好试一下了吗</h3>
+          <p>下载页有系统要求、文件名与常见安全提示，看完就能开世界。</p>
+          <p><a class="link-more" href="download.html">前往下载页 →</a></p>
+        </article>
+        <article class="card" data-reveal>
+          <h3>遇到问题了</h3>
+          <p>「连不上怎么办」「主机身份是什么」「为什么需要账号」这些问题都有专门解答。</p>
+          <p><a class="link-more" href="faq.html">查看常见问题 →</a></p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h4>CraftLink · 方块联机</h4>
+        <p>让你的 Minecraft 局域网世界，被朋友用一个房间名接进来。</p>
+        <p><span class="tag tag-plain">v3.0.0</span></p>
+      </div>
+      <div class="footer-col">
+        <h4>页面</h4>
+        <ul class="footer-links">
+          <li><a href="index.html">首页</a></li>
+          <li><a href="tech.html">技术路线</a></li>
+          <li><a href="download.html">下载</a></li>
+          <li><a href="faq.html">常见问题</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>关于</h4>
+        <ul class="footer-links">
+          <li>作者的第一款开源作品（GitHub 主页稍后放出）</li>
+          <li>规划中：STUN 直连 / AUTO 调度，敬请期待</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">© 2026 CraftLink（方块联机）</p>
+      <span class="footer-sep" aria-hidden="true"></span>
+      <p class="icp">你的备案号（占位）</p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<!-- 可选组件（optional/site，不随主交付发布）：以下页面是我们早期官网的原样留档，
+     仅作参考实现。里面的版本号 / 日期 / 字节数 / 备案号都是占位或过时内容，
+     请按 optional/site/README.md 重新填入你自己的真实信息。 -->
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>常见问题 —— CraftLink 方块联机</title>
+<meta name="description" content="CraftLink（方块联机）常见问题：怎么建房、怎么加入、房间名能不能用中文、要不要账号、主机身份是什么、连不上怎么办、延迟如何、要不要钱，一次说清。">
+<meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
+<script>
+/* 尽早套用已保存的主题，避免刷新时闪白/闪黑（无 JS 时跟随系统） */
+(function () {
+  try {
+    var t = window.localStorage.getItem('craftlink-theme');
+    if (t === 'light' || t === 'dark') {
+      document.documentElement.setAttribute('data-theme', t);
+    }
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" role="img" aria-label="CraftLink 方块标志" focusable="false">
+        <rect width="32" height="32" rx="8" fill="url(#clBrand)"></rect>
+        <defs>
+          <linearGradient id="clBrand" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#6f9bff"></stop>
+            <stop offset="1" stop-color="#3ddc84"></stop>
+          </linearGradient>
+        </defs>
+        <g fill="#ffffff" opacity="0.94">
+          <rect x="6" y="6" width="8" height="8" rx="1.6"></rect>
+          <rect x="18" y="6" width="8" height="8" rx="1.6" opacity="0.72"></rect>
+          <rect x="6" y="18" width="8" height="8" rx="1.6" opacity="0.72"></rect>
+        </g>
+        <rect x="18" y="18" width="8" height="8" rx="1.6" fill="#0f1726"></rect>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">CraftLink</span>
+        <span class="brand-sub">方块联机</span>
+      </span>
+    </a>
+
+    <nav class="site-nav" id="site-nav" data-nav aria-label="主导航">
+      <a href="index.html">首页</a>
+      <a href="tech.html">技术路线</a>
+      <a href="download.html">下载</a>
+      <a href="faq.html" aria-current="page">常见问题</a>
+    </nav>
+
+    <div class="header-tools">
+      <button class="icon-btn theme-toggle" type="button" data-theme-toggle data-pref="system" aria-label="主题：跟随系统" title="主题：跟随系统">
+        <svg class="icon icon-light" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.1"></circle>
+          <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"></path>
+        </svg>
+        <svg class="icon icon-dark" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7Z"></path>
+        </svg>
+        <svg class="icon icon-system" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.8" y="4.2" width="18.4" height="12.4" rx="2"></rect>
+          <path d="M9 20.2h6M12 16.6v3.6"></path>
+        </svg>
+      </button>
+      <button class="icon-btn nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-controls="site-nav" aria-label="展开导航菜单">
+        <svg class="icon icon-menu" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16"></path>
+        </svg>
+        <svg class="icon icon-close" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6L6 18"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <p class="pill"><span class="dot" aria-hidden="true"></span>常见问题 · 12 条</p>
+      <h1>常见问题</h1>
+      <p class="hero-lede">
+        从「怎么建房」到「要不要钱」，把最常被问到的 12 个问题一次说清。
+        没找到答案？先看<a href="tech.html">技术路线</a>，那里解释了很多「为什么」。
+      </p>
+    </div>
+  </section>
+
+  <section class="section section-tight" aria-labelledby="faq-title">
+    <div class="wrap wrap-narrow">
+      <div class="section-head" data-reveal>
+        <h2 id="faq-title">全部问题</h2>
+        <p>点击标题展开答案。</p>
+      </div>
+
+      <ul class="faq-index" data-reveal>
+        <li><a href="#q-create">怎么建房</a></li>
+        <li><a href="#q-join">怎么加入</a></li>
+        <li><a href="#q-name">中文房间名</a></li>
+        <li><a href="#q-account">要不要账号</a></li>
+        <li><a href="#q-host">主机身份</a></li>
+        <li><a href="#q-fail">连不上怎么办</a></li>
+        <li><a href="#q-ping">延迟多少</a></li>
+        <li><a href="#q-price">要不要钱</a></li>
+        <li><a href="#q-platform">跨平台朋友</a></li>
+        <li><a href="#q-lang">语言与主题</a></li>
+        <li><a href="#q-safe">数据安全</a></li>
+        <li><a href="#q-next">接下来的计划</a></li>
+      </ul>
+
+      <div class="faq-list">
+
+        <details class="faq-item" id="q-create" open>
+          <summary>怎么建房（开一个能联机的世界）？</summary>
+          <div class="faq-body">
+            <ol>
+              <li>打开你的 Minecraft Java 版单人存档，按 <kbd>Esc</kbd>。</li>
+              <li>点<b>「对局域网开放」</b>，游戏会给你一个本机端口号，记下它。</li>
+              <li>打开 CraftLink 客户端，身份选<b>主机</b>，填一个房间名（例如「周末生存」）。</li>
+              <li>填上刚才记下的游戏端口，点<b>「开始连接」</b>。等状态变成已连接、隧道就绪。</li>
+              <li>把<b>房间名</b>告诉朋友，他们就能进来了。</li>
+            </ol>
+            <p>客户端不是启动器：世界还是你在游戏里正常开的那个世界，CraftLink 只负责把它送到朋友那边。</p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-join">
+          <summary>朋友怎么加入？</summary>
+          <div class="faq-body">
+            <ol>
+              <li>朋友下载同一个 CraftLink 客户端，双击运行。</li>
+              <li>身份选<b>玩家</b>，填和房主<b>完全一样</b>的房间名，点「开始连接」。</li>
+              <li>等客户端提示本地端口就绪后，在 Minecraft 里选择<b>「多人游戏」→「直接连接」</b>。</li>
+              <li>地址填 <code>127.0.0.1:端口</code>（端口以客户端界面上显示的为准），加入即可。</li>
+            </ol>
+            <p>
+              房间名要一字不差：多一个空格、少一个空格，都算两个不同的房间。
+              建议直接复制粘贴房主发来的房间名。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-name">
+          <summary>房间名可以用中文吗？重名了怎么办？</summary>
+          <div class="faq-body">
+            <p>
+              可以。<b>中文、英文、空格都支持</b>，叫「周末生存」和叫 <code>weekend</code> 一样正常工作。
+              房间名就是房间的标识，<b>同名即同一个房间</b>；程序内部会自己生成一个房间 ID 来做实际标识，
+              你不需要看到也不需要记它。
+            </p>
+            <p>
+              所以重名不是「冲突」而是「进同一个房间」：如果有人用了你想用的名字，你进去看到的会是他的房间。
+              起名时加一点自己的特征（比如「房主的名字 + 存档名」）就不会撞车。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-account">
+          <summary>为什么需要账号？我要注册登录吗？</summary>
+          <div class="faq-body">
+            <p>
+              <b>客户端不需要注册、不需要登录。</b>打开就能用，填的是房间名和端口，没有任何密码要记。
+            </p>
+            <p>
+              客户端里会用到你的一个<b>显示名字</b>（用来在房间里区分谁是谁）以及本机自动生成的客户端标识，
+              这些都是为了「让你顺利进房间、出错时好排查」用的，不涉及任何账号体系。
+              也正因为没有账号，房间目前不设密码 —— 谁能说出房间名，谁就能进来。
+              别把房间名发到公开的地方，如果房间名外泄了，换一个名字重新开即可。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-host">
+          <summary>「主机身份」是什么？为什么点了停止，别人还是进不来？</summary>
+          <div class="faq-body">
+            <p>
+              每个房间里有一个 <b>host（主机）</b>位置，它是房间里唯一「连着 Minecraft 世界」的位置，
+              Minecraft 的连接绑定在它上面。谁开世界谁持有它，<b>先到先得</b>。
+            </p>
+            <p>
+              关键点：在客户端点<b>「停止开服」只停止世界，不会释放这个位置</b>。
+              所以如果队友接手开世界，他会发现位置还被你占着、进不去 ——
+              这时候需要在客户端点<b>「释放主机身份」</b>，位置空出来后，别人就能接手开世界了。
+            </p>
+            <p>
+              另外，如果你持有主机身份时断线或关闭了客户端，位置会被自动回收；
+              <b>但房间不会因为「停止开服」而被销毁</b> —— 房间的寿命绑定在成员连接上，
+              你可以随时重新开一个世界接着玩，朋友不用重新加房间。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-fail">
+          <summary>连不上怎么办？</summary>
+          <div class="faq-body">
+            <p>按这个顺序排查，绝大多数问题在前三步就能解决：</p>
+            <ol>
+              <li><b>核对房间名</b>：两边是否完全一致（含空格、大小写、有没有全角空格）。</li>
+              <li><b>确认世界开着</b>：房主那边「对局域网开放」还在，游戏没有退出存档。</li>
+              <li><b>确认主机位置有人持有</b>：如果房主点过「停止开服」，位置不会自动释放，需要点「释放主机身份」或重开一次。</li>
+              <li><b>核对端口</b>：玩家在 Minecraft 里填的端口，要以自己客户端界面上显示的本地端口为准。</li>
+              <li><b>看客户端日志</b>：客户端界面上会显示连接状态和错误原因，「连不上中继」和「房间不存在」是两回事。</li>
+              <li><b>换网络试试</b>：公司/学校网络如果对本机程序有额外限制，可以换手机热点对比一下，能快速判断是不是本地网络的问题。</li>
+            </ol>
+            <p>
+              如果两边都显示已连接但游戏进不去，通常是<b>游戏本身</b>的问题（版本/模组不匹配等），
+              可以先在房主本机用 <code>127.0.0.1:游戏端口</code> 直连测试，确认世界本身可以进。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-ping">
+          <summary>延迟有多少？会卡吗？</summary>
+          <div class="faq-body">
+            <p>
+              我们不在这里写一个固定数字 —— 延迟取决于你和房主分别到中继服务器的网络质量，
+              写死了只会误导人。客户端界面会显示实时中转延迟，你可以自己看着数字判断。
+            </p>
+            <p>
+              定性地说：<b>同城、同省的朋友体验接近直连</b>，正常生存、建造基本感觉不到差别；
+              <b>跨运营商、跨地区会有明显绕路感</b>，比如区块加载慢、挖掘方块有回弹延迟。
+            </p>
+            <p>
+              中继只转发字节，它不会加速网络。规划中的 STUN 直连就是为了给「两边本来就很近」的情况
+              找一条更短的路 —— 敬请期待。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-price">
+          <summary>要不要钱？有没有内购？</summary>
+          <div class="faq-body">
+            <p>
+              <b>不要钱。</b>没有内购、没有会员、没有广告，也不要求你注册任何东西。
+              这是一个个人开发的开源项目，客户端完整功能免费使用。
+            </p>
+            <p>
+              唯一的成本是作者自己承担的服务器开销。如果将来因为规模需要调整，
+              我们会在站点上明说，而不是悄悄塞限制。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-platform">
+          <summary>朋友用别的平台 / 别的启动器能进吗？</summary>
+          <div class="faq-body">
+            <p>
+              目前 CraftLink 客户端本体是 <b>Windows 单文件程序</b>，
+              持房主身份、开世界的人需要在 Windows 上运行它。
+            </p>
+            <p>
+              玩家一侧的关键动作只有两步：跑客户端 + 在 Minecraft 里连 <code>127.0.0.1:端口</code>。
+              也就是说，房主在 Windows 上开好房间之后，其他平台的朋友只要能跑起对应版本的客户端，
+              就能用同一个房间名接进来 —— 我们不会承诺「所有平台都一键可用」，
+              但会尽量不让平台成为唯一的门槛。
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-lang">
+          <summary>界面能换语言吗？有暗色主题吗？</summary>
+          <div class="faq-body">
+            <p>
+              都能。客户端支持 <b>中文 / English / 日本語</b> 三种界面语言，
+              主题支持 <b>暗色 / 亮色 / 跟随系统</b>，在客户端设置里随时切换，重启后依然记得你的选择。
+            </p>
+            <p>顺便说一句，你现在看的这个网站右上角也有主题切换按钮，跟客户端一样支持跟随系统。</p>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-safe">
+          <summary>安全吗？会不会泄露我的存档？</summary>
+          <div class="faq-body">
+            <p>
+              中继服务器的职责是<b>转发字节</b>：它不解析 Minecraft 协议，不拆包、不改包，
+              按收到的顺序原样转发。它看不到「这是聊天消息」「那是区块数据」这种含义，
+              也不会存你的存档文件。
+            </p>
+            <p>
+              需要你自己注意的两件事：
+            </p>
+            <ul>
+              <li>房间目前<b>不设密码</b>，知道房间名就能进。请把房间名只发给朋友。</li>
+              <li>进房间的人拥有和你在同一个世界里玩的能力（可以破坏方块、拿箱子里的东西），
+                不熟的人不要随便放进来，进游戏后也可以用游戏自带的封禁/白名单管理。</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="faq-item" id="q-next">
+          <summary>接下来会有什么新功能？</summary>
+          <div class="faq-body">
+            <p>
+              规划中的两项是 <b>STUN 直连</b>与 <b>AUTO 调度</b>：
+              在「一定能连上」的中继路线之上，再给网络条件好的情况找一条更短的路径。
+              <b>敬请期待 —— 我们不会写具体版本号和日期</b>，做稳了才会放出来。
+            </p>
+            <p>
+              中继转发这条路会一直保留：打洞失败必须能自动回落，不允许出现「以前能连、现在连不上」。
+              更多细节在<a href="tech.html">技术路线</a>页。
+            </p>
+          </div>
+        </details>
+
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="wrap wrap-narrow">
+      <div class="grid grid-2">
+        <article class="card" data-reveal>
+          <h3>准备好开始了</h3>
+          <p>看系统要求、拿客户端、核对校验值 —— 下载页一篇搞定。</p>
+          <p><a class="link-more" href="download.html">前往下载页 →</a></p>
+        </article>
+        <article class="card" data-reveal>
+          <h3>想搞懂背后的原理</h3>
+          <p>中继是怎么转发的、房间和主机位置怎么协作，技术路线页画得很清楚。</p>
+          <p><a class="link-more" href="tech.html">阅读技术路线 →</a></p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h4>CraftLink · 方块联机</h4>
+        <p>让你的 Minecraft 局域网世界，被朋友用一个房间名接进来。</p>
+        <p><span class="tag tag-plain">v3.0.0</span></p>
+      </div>
+      <div class="footer-col">
+        <h4>页面</h4>
+        <ul class="footer-links">
+          <li><a href="index.html">首页</a></li>
+          <li><a href="tech.html">技术路线</a></li>
+          <li><a href="download.html">下载</a></li>
+          <li><a href="faq.html">常见问题</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>关于</h4>
+        <ul class="footer-links">
+          <li>作者的第一款开源作品（GitHub 主页稍后放出）</li>
+          <li>规划中：STUN 直连 / AUTO 调度，敬请期待</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">© 2026 CraftLink（方块联机）</p>
+      <span class="footer-sep" aria-hidden="true"></span>
+      <p class="icp">你的备案号（占位）</p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

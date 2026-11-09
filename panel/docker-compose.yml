@@ -1,0 +1,217 @@
+# ============================================================
+#  CraftLink Admin Panel  --  Docker Compose
+# ============================================================
+#
+#  部署步骤（详见 docs/DEPLOY_GUIDE.md 与 docs/M4-SSL-DOMAIN.md）：
+#
+#    1. 把整个 panel 目录上传到 <安装根目录>/panel（默认 /opt/mc-link/panel）
+#    2. cp config.sample.php config.php   然后填写三项配置
+#    3. docker compose up -d --build
+#    4. 面板地址：http://<服务器IP>:<MCLINK_PANEL_PORT>/（默认 19102）
+#       —— M4 之后**不需要**再在 1Panel 里建反向代理：面板容器自带 nginx。
+#    5. 要 HTTPS：登录面板 →「面板设置」→ 域名与 SSL（上传证书或 Let's Encrypt）
+#       再跑一次 `mclink apply-network`（或 scripts/panel-apply.sh）把 80/443 映射加上。
+#
+#  [!] 端口映射的三条约定（M4）
+#
+#    * 容器内端口是**固定**的：80 = HTTP，443 = HTTPS，19103 = 急救入口。
+#      面板设置里的 listen_ip / listen_port 是**宿主机**这一侧的绑定地址，
+#      由下面的 ports 决定（改完要重建容器：mclink apply-network）。
+#    * 急救入口（19103）**只发布到宿主机回环**：安全入口 / 域名绑定 / 证书
+#      配错的时候，从服务器上 http://127.0.0.1:19103/ 进去改回来。
+#    * 80 / 443 故意**不在这里发布**：它们经常已经被 1Panel 的 nginx 占着，
+#      写死在基础 compose 里会让 `docker compose up` 直接失败。需要的时候由
+#      `scripts/panel-apply.sh` 生成一份 override 文件再加上（见那个脚本）。
+#
+#  [!] 凭据（D5）：这里**只有引用**，真实值在 <安装根目录>/.env。
+#
+#      `${MCLINK_DB_PASSWORD:?...}` 这种形式下，变量没设置时 docker compose
+#      会**拒绝启动**并打出 `:?` 后面那句人话提示；rebuild.sh 会先一步拦住。
+#      真实值只存在于服务器的 .env（600，不进仓库、不进交付包）。
+#
+#      参考：SECURITY-NOTICE.md（v3.9.20 的硬编码风险已按 D5 修复）。
+# ============================================================
+
+services:
+  mc-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # apk 软件源。阿里云 ECS 走内网镜像，通常几十秒装完；
+        # 官方源在国内经常 TLS 超时（实测卡 8 分钟）。
+        # 想换源：docker compose build --build-arg APK_MIRROR=mirrors.tuna.tsinghua.edu.cn
+        APK_MIRROR: ${APK_MIRROR:-mirrors.aliyun.com}
+        # 不用 Let's Encrypt（只上传证书）时可以省掉 certbot：
+        #   docker compose build --build-arg INSTALL_CERTBOT=0
+        INSTALL_CERTBOT: ${INSTALL_CERTBOT:-1}
+
+    container_name: mc-panel
+    image: mc-link-panel:2.11.45
+
+    restart: unless-stopped
+
+    networks:
+      - mclink
+
+    # ---- 端口映射（宿主机这一侧由 .env 决定）----
+    #
+    #   MCLINK_PANEL_LISTEN_IP  绑定到哪个地址：127.0.0.1（只给本机反代用，默认）
+    #                           或 0.0.0.0（直接对外）
+    #   MCLINK_PANEL_PORT       对外端口（默认 19102）
+    #   MCLINK_PANEL_RESCUE_PORT 急救入口端口（默认 19103，只绑回环）
+    ports:
+      # [!] 这两行是**机器改写**的，形状别动：
+      #     * install.sh --panel-port N  会把第一行换成 "127.0.0.1:N:80"
+      #       （scripts/install_patch.py 的 patch-port）；
+      #     * scripts/panel-apply.sh（mclink apply-network）会按「面板设置」里的
+      #       listen_ip / listen_port 改写成 "<ip>:<port>:80"，并同步下面
+      #       MCLINK_PANEL_PORT / MCLINK_PANEL_RESCUE_PORT 两个环境变量。
+      #     两边（宿主机绑定的端口 与 容器里 nginx 听的端口）永远保持一致，
+      #     所以改端口这件事不会出现"容器里没人在听"的中间状态。
+      - "127.0.0.1:19102:80"
+      - "127.0.0.1:19103:19103"
+
+    volumes:
+      # 面板配置放在宿主机上，镜像里不含任何密钥。
+      #
+      # [!] config.php 是**可选**的：
+      #   下面的 environment 已经提供了数据库和中继的全部连接信息，
+      #   所以即使 config.php 不存在、或者被
+      #   `cp config.sample.php config.php` 覆盖成 CHANGE_ME_xxx，
+      #   面板依然能正常工作（标题/session secret 用内置默认值）。
+      #
+      # [!] 权限要求（踩过坑）：
+      #   php-fpm 以 nobody(65534) 运行。如果挂进来的是
+      #   `chmod 600 root:root`，容器读不到，页面会 500。
+      #   正确做法（宿主机执行）：
+      #       chown 65534:65534 config.php && chmod 640 config.php
+      - ./config.php:/var/www/lib/config.php:ro
+
+      # ---- 面板设置（D1：数据库为主 + 配置文件备份）----
+      #
+      # 面板「设置」页把同一份设置写两处：数据库里的 panel_settings 表（主）
+      # 和这里的 config/panel-settings.json（备份）。数据库不可用时面板只读
+      # 回退到这份 JSON —— 所以它必须落在宿主机上，不能只活在容器里。
+      #
+      # 宿主机路径可以用 .env 里的 MCLINK_CONFIG_DIR 覆盖（默认 ./config）；
+      # 面板自带的 nginx 也读同一份 JSON（渲染就是这个容器里的根代理做的）。
+      #
+      # [!] 权限：php-fpm 以 nobody(65534) 运行，宿主机目录要先建好并 chown，
+      #     否则面板会明确报「配置文件备份写入失败 / 上传目录不可写」：
+      #         mkdir -p config data/panel-uploads data/panel-certs
+      #         chown 65534:65534 config data/panel-uploads data/panel-certs
+      - ${MCLINK_CONFIG_DIR:-./config}:/var/www/config
+
+      # ---- logo 上传（左上角标记 + favicon 是同一张图）----
+      # 同样 chown 65534:65534；也可以用 .env 里的 MCLINK_PANEL_UPLOAD_DIR 覆盖。
+      - ${MCLINK_PANEL_UPLOAD_DIR:-./data/panel-uploads}:/var/www/data/panel-uploads
+
+      # ---- 证书目录（M4：SSL / ACME / 急救覆盖 / 根代理队列都在这一个卷里）----
+      #
+      #   <这个目录>/panel-*.crt / *.key   安装好的证书（私钥 0600 root）
+      #   <这个目录>/incoming/             面板上传上来、还没被根代理校验的证书
+      #   <这个目录>/certbot/              certbot 的账号与续期状态（必须持久化）
+      #   <这个目录>/agent/                根代理的请求 / 结果 / 日志 / 心跳
+      #   <这个目录>/status.json           证书状态（面板只读这个，不解析 PEM）
+      #
+      # [!] 升级 / 重建容器都不能丢这个目录：丢了就要重新申请证书，
+      #     而且 ACME 账号也会重来（有速率限制）。
+      - ${MCLINK_PANEL_CERT_DIR:-./data/panel-certs}:/var/www/certs
+
+    environment:
+      TZ: Asia/Shanghai
+
+      # ---- 凭据：值只在 .env 里（D5：开源版不硬编码）----
+      # 两个 compose 引用**同一个** .env 变量，所以面板与中继永远拿到同一个值
+      # （两边不一致的症状是面板报「无法从中继读取开关状态」）。
+      # 缺变量时 docker compose 拒绝启动，`:?` 后面就是那时打出来的提示。
+      MCLINK_DB_HOST: "web-mysql80"
+      MCLINK_DB_NAME: "mclink"
+      MCLINK_DB_USER: "mclink"
+      MCLINK_DB_PASSWORD: "${MCLINK_DB_PASSWORD:?MISSING: 在 <安装根目录>/.env 里设置 MCLINK_DB_PASSWORD（见 .env.example）}"
+      MCLINK_RELAY_API_URL: "http://mc-relay:19101"
+      MCLINK_ADMIN_API_TOKEN: "${MCLINK_ADMIN_API_TOKEN:?MISSING: 在 <安装根目录>/.env 里设置 MCLINK_ADMIN_API_TOKEN（见 .env.example）}"
+
+      # 面板标题 / 备案号（可选）。
+      #
+      # [!] 这两项现在也进「面板设置」页了，优先级是：
+      #     面板设置 > 这里的 config.php / 环境变量 > 内置默认值。
+      #     所以想改名字 / 换备案号，登录面板在设置页里改就行，不用重建容器。
+      #     这里留着是为了不破坏老部署（拆掉这两行，页面会退回设置页里的值 /
+      #     内置默认值：标题 CraftLink 管理面板、备案号不渲染）。
+      #
+      # 产品名：MC-Link → CraftLink（方块联机）。
+      MCLINK_PANEL_TITLE: "CraftLink 管理面板"
+      # 备案号（M1/D5）：**不写死**。默认空 -> 页脚不渲染；
+      # 想显示就在 .env 里写 MCLINK_PANEL_ICP=<你的备案号>（或在面板设置页里填）。
+      MCLINK_PANEL_ICP: "${MCLINK_PANEL_ICP:-}"
+
+      # ---- 面板设置的备份文件 / logo 上传目录（容器内路径，固定）----
+      # 宿主机上是哪两个目录由上面 volumes 的 ${MCLINK_CONFIG_DIR:-./config}
+      # 和 ${MCLINK_PANEL_UPLOAD_DIR:-./data/panel-uploads} 决定。
+      MCLINK_CONFIG_DIR: "/var/www/config"
+      MCLINK_PANEL_UPLOAD_DIR: "/var/www/data/panel-uploads"
+
+      # ---- 老部署（安装器 install.sh / M5）写进来的初始值 ----
+      #
+      # 面板第一次启动时会把这三个值**播种一次**（mclink-panel.php seed-from-env）：
+      # 只写"设置里还没有的那一条"，之后就完全以「面板设置」为准 ——
+      # 所以清空安全入口 / 解绑域名是**真的清空**，不会被环境变量顶回来
+      # （那正是自锁的经典成因）。
+      MCLINK_PANEL_SECRET_PATH: "${MCLINK_PANEL_SECRET_PATH:-}"
+      MCLINK_PANEL_DOMAIN: "${MCLINK_PANEL_DOMAIN:-}"
+      # 只用于"第一次启动时播种一次"；真正的对外端口看上面的 ports。
+      MCLINK_PANEL_PORT: "19102"
+
+      # ---- M4：自带 nginx / 证书 / 根代理 ----
+      #
+      # 容器内的端口与目录都是固定的（容器外由 ports / volumes 决定）：
+      #   MCLINK_NGINX_HTTP_PORT    80     HTTP
+      #   MCLINK_NGINX_HTTPS_PORT   443    HTTPS（ssl_mode != off 时）
+      #   MCLINK_PANEL_RESCUE_PORT  19103  急救入口
+      #   MCLINK_ACME_WEBROOT       /var/www/acme   Let's Encrypt 校验文件
+      MCLINK_PANEL_CERT_DIR: "/var/www/certs"
+      # php-fpm 的运行用户 uid（根代理用它 chown「请求目录 / 待安装证书目录」，
+      # 否则 root 先建的目录会让面板写不进去）。默认就是 nobody(65534)。
+      MCLINK_PANEL_WEB_UID: "${MCLINK_PANEL_WEB_UID:-65534}"
+
+      # [!] 急救端口：容器内固定，宿主机那边由上面的 ports 映射（默认一样是 19103）。
+      #     要换端口就两个一起换 —— scripts/panel-apply.sh 会替你改（它按 .env 里的
+      #     MCLINK_PANEL_RESCUE_PORT 同时改这一行和上面那行 ports）。
+      MCLINK_PANEL_RESCUE_PORT: "19103"
+      MCLINK_NGINX_HTTP_PORT: "80"
+      MCLINK_NGINX_HTTPS_PORT: "443"
+      MCLINK_ACME_WEBROOT: "/var/www/acme"
+
+      # 宿主机上 80 / 443 映射成什么端口（跳转地址要用；默认 443 时不带端口）。
+      # 这两个值和 scripts/panel-apply.sh 生成的 override 文件必须一致。
+      MCLINK_PANEL_HTTP_PORT: "${MCLINK_PANEL_HTTP_PORT:-80}"
+      MCLINK_PANEL_HTTPS_PORT: "${MCLINK_PANEL_HTTPS_PORT:-443}"
+
+      # 根代理的节奏（秒）：2 秒扫一次队列；每 6 小时查一次证书到期。
+      MCLINK_AGENT_INTERVAL: "${MCLINK_AGENT_INTERVAL:-2}"
+      MCLINK_ACME_CHECK_INTERVAL: "${MCLINK_ACME_CHECK_INTERVAL:-21600}"
+      MCLINK_ACME_RENEW_DAYS: "${MCLINK_ACME_RENEW_DAYS:-30}"
+
+    # 内存上限。实测空闲约 25 MB，有人用面板时约 45 MB。
+    # 服务器总内存只有 1.58 GB 且没有 swap，所以卡得比较紧。
+    mem_limit: 128m
+
+    # php-fpm 的 3 个 worker 加起来不超过 90 MB，再加 nginx 约 5 MB，
+    # 根代理（sh + 偶尔 openssl）峰值几 MB，128 MB 有足够余量；
+    # 真超了 Docker 会重启容器而不是拖垮整台机器。
+    #
+    # [!] ACME 续期时 certbot 是**另一个进程**（python，峰值约 60 MB）：
+    #     那一刻内存会比较紧。真遇到 OOM 就把 mem_limit 调到 256m。
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  mclink:
+    external: true
+    name: 1panel-network
