@@ -1,0 +1,5 @@
+# Verified Windows x64 build environment: Python 3.11
+pyinstaller==6.22.2
+Pillow==12.3.0
+customtkinter==6.0.0
+darkdetect==0.8.0
