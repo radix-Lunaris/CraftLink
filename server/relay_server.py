@@ -2184,7 +2184,7 @@ def parse_hello(line):
     # 版本门（ADDITIVE）：新客户端在行尾多挂一个 `ver=<x.y.z>`。中继的版本
     # 检查在下面单独扫描整行，这里只是把它从**按位置解析**的字段里摘掉 ——
     # 否则 `HOST_TUNNEL <room> ver=3.0.8` 会把版本号当成 client_id。
-    parts = [p for p in parts if not p.startswith(("ver=", "caps=", "sid=", "side=", "resume=", "generation=", "peer=", "recover="))]
+    parts = [p for p in parts if not p.startswith(("ver=", "caps=", "sid=", "side=", "resume=", "generation=", "peer=", "recover=", "member="))]
 
     if len(parts) < 2:
         return None, None, "", "", "", "BAD_HANDSHAKE"
@@ -2427,7 +2427,7 @@ async def announce_host_serving_gone(room, room_name, reason, code,
         )
 
 
-async def handle_host(reader, writer, room_name, client_id, username, token=""):
+async def handle_host(reader, writer, room_name, client_id, username, token="", member_room=None):
     peer = safe_peer(writer)
 
     enable_tcp_nodelay(writer)
@@ -2448,6 +2448,12 @@ async def handle_host(reader, writer, room_name, client_id, username, token=""):
         current_host_idle = (
             room.host_idle_seconds() if room is not None else None
         )
+
+    if member_room is not None and room is not member_room:
+        writer.write(b"ERROR HOST_MEMBER_REQUIRED\n")
+        await writer.drain()
+        await close_writer(writer)
+        return
 
     if existing_host is not None and not _same_host_person(
         client_id, current_host_member_id, token, current_host_token,
@@ -2500,11 +2506,13 @@ async def handle_host(reader, writer, room_name, client_id, username, token=""):
     # 只允许**建房**（CREATE / 老式 HOST 首连）走 get_or_create：legacy
     # `HOST <room>` 本来就是老客户端的建房方式。`owner_key` 让"同一个 Owner
     # 重建同一个房间"能带回他上一次显式选过的连接模式。
-    room = await get_or_create_room(room_name, owner_key=client_id)
+    room = member_room if member_room is not None else await get_or_create_room(
+        room_name, owner_key=client_id
+    )
 
     async with room.lock:
 
-        if room.closed:
+        if room.closed or room.closing:
             # Room object died between lookup and attach.
             writer.write(b"ERROR ROOM_CLOSED\n")
             await writer.drain()
@@ -5255,8 +5263,20 @@ async def client_connected(reader, writer):
                 return
 
         if role == "HOST":
+            membership_required = auto_relay.extras(line).get("member") == "1"
+            if membership_required:
+                member = auto_relay.member_for(room, client_id) if room else None
+                if (room is None or room.closed or room.closing or room.owner is None
+                        or member is None or member.closed or member.detached
+                        or room.host_member is not member
+                        or token in ("", "-")
+                        or token not in (member.token, member.guest_token)):
+                    writer.write(b"ERROR HOST_MEMBER_REQUIRED\n")
+                    await writer.drain()
+                    return
             await handle_host(
-                reader, writer, room_name, client_id, username, token
+                reader, writer, room_name, client_id, username, token,
+                member_room=room if membership_required else None,
             )
 
         elif role == "HOST_TUNNEL":

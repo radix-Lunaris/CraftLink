@@ -1293,7 +1293,7 @@ class HostSession(SessionBase):
             max_players=cfg.max_players,
             client_id=cfg.client_id,
             username=cfg.username or self.account,
-            token=self.token,
+            token=self.token or getattr(self.engine_provider, "_guest_token", ""),
             reconnect_delay=cfg.reconnect_delay,
             on_log=self.log,
             on_event=self.event,
@@ -1302,6 +1302,7 @@ class HostSession(SessionBase):
             direct_path_releaser=self.release_direct_path,
             direct_backend_setter=self.set_direct_backend,
             auto_manager=self.make_auto_manager(),
+            membership_required=True,
             on_traffic=self.traffic_callback(),
         )
 

@@ -86,8 +86,10 @@ class HostCore:
         direct_backend_setter=None,
         on_traffic=None,
         auto_manager=None,
+        membership_required=False,
     ):
         self.auto_manager = auto_manager
+        self.membership_required = membership_required
         #: V3 STUN 模式：拿一条**已经打通**的 UDP 通道来承载这个会话。
         #:
         #: 可调用对象，签名 () -> Path 或 None。房间级打洞（room_direct.py）
@@ -404,6 +406,8 @@ class HostCore:
                 # ------------------------------------------------------------------
                 if self.auto_manager is not None:
                     line += " caps=auto_stream_v1"
+                if self.membership_required:
+                    line += " member=1"
                 line += f" ver={_cfg.APP_VERSION}"
 
                 writer.write((line + "\n").encode())

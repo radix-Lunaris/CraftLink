@@ -95,10 +95,10 @@ def _unfingerprinted(rel, name):
 
     return False
 
-README_TEMPLATE = """CraftLink v5.1.5 正式部署包
+README_TEMPLATE = """CraftLink v5.1.6 切网身份恢复候选包
 ================================================================
 源码使用 Git 管理；本包由 scripts/make_build.py 生成。
-当前版本修复连接清理、临时网络故障恢复及错误在线状态；界面布局和私有配置保留。
+当前候选修复切网后旧开服通道重建无房主房间、重连终止后残留后台连接。
 公共客户端默认使用示例地址；老用户保留原设置，自用地址文件只在私有分发目录。
 
 已有部署必须先备份并保值迁移，不能先覆盖旧 Compose：
@@ -113,8 +113,8 @@ README_TEMPLATE = """CraftLink v5.1.5 正式部署包
 私有配置不在本包中，严禁将其补进公共压缩包。
 客户端运行 CraftLink.exe；控制台排查使用 CraftLink-console.exe。
 源码运行先 pip install -r requirements.txt，再 python client/main.py。
-中继和两端客户端同步更新为 5.1.5；面板源码不变，复用原 5.1.1 面板镜像。
-v5.1.5 已获用户验收。发行记录见 https://github.com/radix-Lunaris/CraftLink/releases/tag/v5.1.5 。
+中继和两端客户端同步更新为 5.1.6；面板源码不变，复用原 5.1.1 面板镜像。
+v5.1.6 待 VPS 和真实切网验收。
 
 共 {count} 个文件：
 {listing}

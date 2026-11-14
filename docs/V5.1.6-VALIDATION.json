@@ -1,0 +1,32 @@
+{
+  "version": "5.1.6",
+  "candidate": true,
+  "date": "2026-11-14",
+  "regression": {
+    "tests": 96,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 127.526,
+    "platform": "Windows Python 3.11",
+    "network": "isolated loopback"
+  },
+  "vps_acceptance": "pending",
+  "real_network_switch": "pending",
+  "source_tree_dirty": true,
+  "file_hashes": {
+    "client/mclink/config/settings.py": "ab183687f80d3b1f420a1945a45420ad985b3f7004bc9f4fc34f9db13d5805fe",
+    "client/mclink/core/engine.py": "a0de637ad8b930c5bc25747ec8934006bb5dce22e7b6a3931cdc1c8a46ae0a32",
+    "client/mclink/core/host_core.py": "bb6d25c080b457f8c9871e3a43535cab0df5819960c3cde6d50539e2940e9aac",
+    "client/mclink/core/session.py": "ae920b5da63888d828980d135e0f6b35cd09395dbd42009aecb25913d7d86876",
+    "client/mclink/gui/controller.py": "615480fc76139970914d7a0a8ce9d0d812307378763691fcfecf0ed7d2c29934",
+    "docs/recovery-change-allowlist.json": "f89a495269715e5dc0082afad318f64205716ceb4d0609179d06463d702d129f",
+    "scripts/make_build.py": "db0706921580809fd32cafeb7a7094b9532ca380152879f6bc6ec5657d650388",
+    "server/Dockerfile": "cf29a4d7829595c2c18e52f1e88947ceb28c4e84cb8f444c094c10fd9a774c54",
+    "server/VERSION": "68cffa589cae3c4d557ecb82a624655a2b6c85199c1425d26eefccfaa8548b2b",
+    "server/relay_server.py": "25c1c4f591a361759fc407602c7b9df67e5a05a71f1d7372f26ea1d2ed53125c",
+    "tests/test_auto_integration.py": "0a1da6a04009ff7945515bedb0e4e42c2a2d624cc0e57ae450151d011554c55b",
+    "tests/test_network_startup.py": "a61943492653dd05c9e3e631ef1577202b8350a7738890caa811cc427cbef7b6",
+    "tests/test_recovery.py": "787311b93c83403262aaa693abed3a4fdee6880da766a3494710e3e1e39f73c8",
+    "docs/V5.1.6-CHANGES.md": "cbe48c9fb2f801ffd5d0117a088f9c8f5f4ecaa0e8d61530d7321531ef5dd51a"
+  }
+}

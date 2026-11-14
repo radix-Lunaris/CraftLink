@@ -109,6 +109,71 @@ class HeartbeatTests(unittest.IsolatedAsyncioTestCase):
 
 class RecoveryIntegrationTests(fixtures.IntegrationTests):
     # Reuse setup only; inherited integration tests are not duplicated below.
+    async def test_membership_host_retry_cannot_recreate_expired_room(self):
+        r, w = await asyncio.open_connection('127.0.0.1', self.port)
+        self.writers.append(w)
+        from mclink.config.settings import APP_VERSION
+        w.write(f'HOST auto-test host host - member=1 ver={APP_VERSION}\n'.encode())
+        await w.drain()
+        self.assertEqual(await asyncio.wait_for(r.readline(), 3),
+                         b'ERROR HOST_MEMBER_REQUIRED\n')
+        self.assertNotIn('auto-test', relay.rooms)
+
+    async def test_membership_host_requires_own_active_seat_and_credential(self):
+        owner = await self.member('host', create=True, mode='relay')
+        await owner.claim_host()
+        room = relay.rooms['auto-test']
+        member = room.members['host']
+        from mclink.config.settings import APP_VERSION
+        for detached, credential in ((True, owner.guest_token), (False, 'invalid-test-token')):
+            member.detached = detached
+            try:
+                r, w = await asyncio.open_connection('127.0.0.1', self.port)
+                self.writers.append(w)
+                w.write(f'HOST auto-test host host {credential} member=1 ver={APP_VERSION}\n'.encode())
+                await w.drain()
+                self.assertEqual(await asyncio.wait_for(r.readline(), 3),
+                                 b'ERROR HOST_MEMBER_REQUIRED\n')
+                self.assertIs(room.owner, member)
+                self.assertIsNone(room.host_writer)
+            finally:
+                member.detached = False
+
+    async def test_membership_host_cannot_create_owner_for_legacy_room(self):
+        from mclink.config.settings import APP_VERSION
+        room = await relay.get_or_create_room('auto-test')
+        r, w = await asyncio.open_connection('127.0.0.1', self.port)
+        self.writers.append(w)
+        w.write(f'HOST auto-test host host - member=1 ver={APP_VERSION}\n'.encode())
+        await w.drain()
+        self.assertEqual(await asyncio.wait_for(r.readline(), 3),
+                         b'ERROR HOST_MEMBER_REQUIRED\n')
+        self.assertIsNone(room.host_writer)
+        self.assertIsNone(room.owner)
+
+    async def test_retrying_host_stays_detached_after_owner_room_expires(self):
+        owner = await self.member('owner', create=True, mode='relay')
+        host_member = await self.member('host')
+        await host_member.claim_host()
+        events = []
+        core = host_core.HostCore(
+            '127.0.0.1', self.port, 'auto-test', client_id='host',
+            username=host_member.username, token=host_member.guest_token,
+            max_tunnels=1, reconnect_delay=.05, membership_required=True,
+            on_log=events.append,
+        )
+        self.cores.append(core)
+        await core.start()
+        await self.ready(lambda: core.control_online and any(core.tunnel_ready.values()))
+        room = relay.rooms['auto-test']
+        self.assertIs(room.owner, room.members['owner'])
+        self.assertIs(room.host_member, room.members['host'])
+        await owner.leave()
+        await self.ready(lambda: 'auto-test' not in relay.rooms)
+        await self.ready(lambda: sum('HOST_MEMBER_REQUIRED' in s for s in events) >= 3)
+        self.assertNotIn('auto-test', relay.rooms)
+        self.assertFalse(core.control_online)
+
     async def test_unexpected_control_loss_is_not_active_stop(self):
         host, player, *_ = await self.start_cores('relay')
         notices = []
@@ -252,6 +317,17 @@ class ControllerRecoveryTests(unittest.TestCase):
         self.assertFalse(c.engine.connection_requested)
         self.assertFalse(c.attempts)
 
+    def test_terminal_recovery_stops_core_with_current_generation(self):
+        c = self.make_controller(True)
+        with patch('mclink.gui.controller.threading.Thread') as worker:
+            c._reconnect_terminal('自动重连超时')
+        self.assertFalse(c.engine.connection_requested)
+        self.assertFalse(c.running)
+        self.assertEqual(worker.call_args.kwargs['target'], c.engine.stop_session)
+        self.assertEqual(worker.call_args.kwargs['kwargs'],
+                         {'recovery_epoch': c.engine.recovery_epoch})
+        worker.return_value.start.assert_called_once()
+
 
 # Only new tests belong to this suite; the original suite runs independently.
 for _name in tuple(vars(fixtures.IntegrationTests)):
@@ -260,6 +336,22 @@ for _name in tuple(vars(fixtures.IntegrationTests)):
 
 
 class IntentTests(unittest.TestCase):
+    def test_room_recovery_stops_old_core_before_attempting_membership(self):
+        engine = MCLinkEngine()
+        engine._room_join_args = {'room': 'test-room'}
+        calls = []
+        def stop(**kwargs):
+            calls.append('stop')
+            return True
+        def open_room(**kwargs):
+            calls.append('join')
+            raise ConnectionError('temporary network failure')
+        engine.stop_session = stop
+        engine.open_room = open_room
+        ok, message = engine.auto_rejoin()
+        self.assertFalse(ok)
+        self.assertEqual(calls, ['stop', 'join'])
+
     def test_explicit_stop_invalidates_late_recovery(self):
         engine = MCLinkEngine()
         engine._connection_requested = True

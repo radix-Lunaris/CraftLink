@@ -3980,6 +3980,13 @@ class ClientController:
         版本不一致、登录失效（token 无效/被禁用）、免登录被要求登录。
         """
         self.engine.cancel_connection_intent()
+        self.running = False
+        threading.Thread(
+            target=self.engine.stop_session,
+            kwargs={"recovery_epoch": self.engine.recovery_epoch},
+            name="mclink-reconnect-stop",
+            daemon=True,
+        ).start()
         self._reconnect_phase = "stopped"
         self._reconnect_stop_reason = str(reason or "")
         self._reconnect_attempt = 0

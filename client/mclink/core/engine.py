@@ -1355,6 +1355,8 @@ class MCLinkEngine:
         details['token'] = details.get('token') or self._guest_token
 
         try:
+            if not self.stop_session(timeout=15, recovery_epoch=epoch):
+                return False, '旧连接尚未清理完成'
             state = self.open_room(
                 **details, timeout=timeout, recovery_epoch=epoch
             )
