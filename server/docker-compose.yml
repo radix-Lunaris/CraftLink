@@ -71,6 +71,7 @@ services:
     #     不想要这个功能就设 MCLINK_STUN_ENABLED=0。
     ports:
       - "${MCLINK_RELAY_PUBLIC_PORT:-19100}:19100/tcp"
+      - "${MCLINK_RELAY_PUBLIC_PORT:-19100}:19100/udp"
       # Built-in STUN: a consecutive UDP pair (MCLanP2P's layout). BOTH must
       # be mapped; missing one is silent, and the client then cannot tell a
       # cone NAT from a symmetric one. See server/Dockerfile.

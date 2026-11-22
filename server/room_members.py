@@ -1608,6 +1608,11 @@ async def _maybe_push_rtt(room, member):
         or abs(value - previous) >= RTT_PUSH_MIN_DELTA_MS
         or now - last_at >= RTT_PUSH_HEARTBEAT_S
     ):
+        # A single snapshot already includes every member's current RTT.
+        # Coalesce concurrent probes so N replies do not trigger N broadcasts.
+        if now < getattr(room, "_rtt_next_broadcast", 0):
+            return
+        room._rtt_next_broadcast = now + 1.0
         member._rtt_pushed = value
         member._rtt_pushed_at = now
         await broadcast_member_state(room)
@@ -2310,10 +2315,10 @@ async def _member_control_body(room, member):
                 await member.send(f"ERROR NO_PEER {keyword}\n")
                 continue
 
-            # Forward the line VERBATIM. The relay must not "helpfully" rewrite
-            # it: the two clients agree on this format, and a middlebox that
-            # edits it would break every future field addition.
-            await peer.send(text + "\n")
+            # The receiver needs the authenticated sender to demultiplex its
+            # shared queue. Preserve all other fields and their ordering.
+            forwarded = " ".join(p for p in parts if not p.startswith("from="))
+            await peer.send(f"{forwarded} from={member.client_id}\n")
 
             _log(
                 "[DIRECT FWD]",

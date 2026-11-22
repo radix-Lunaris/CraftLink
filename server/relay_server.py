@@ -56,6 +56,7 @@ from admin_api import AdminAPI, RawResponse
 import room_registry
 import room_members
 import auto_relay
+import udp_relay
 from room_members import (
     MembershipMixin,
     RoomMember,
@@ -761,7 +762,7 @@ class Room(MembershipMixin):
 
             try:
                 writer.write(line.encode())
-                await writer.drain()
+                await asyncio.wait_for(writer.drain(), timeout=3)
                 return True
             except Exception:
                 return False
@@ -4805,7 +4806,7 @@ async def client_connected(reader, writer):
         #
         # 这不是兼容老版本的路径：见 settings_service 里这个设置项的注释。
         if cfg.RELAY_VERSION and (
-            role in ("CREATE", "JOIN", "HOST", "HOST_TUNNEL", "PLAYER", "AUTO_RESUME", "AUTO_NETWORK")
+            role in ("CREATE", "JOIN", "HOST", "HOST_TUNNEL", "PLAYER", "AUTO_RESUME", "AUTO_NETWORK", "UDP_ATTACH")
         ):
             _ver = ""
 
@@ -5228,6 +5229,11 @@ async def client_connected(reader, writer):
                 username = ensure_username(
                     username, role=role, room=room_name, peer=peer
                 )
+
+        if role == "UDP_ATTACH":
+            await udp_relay.relay.attach(await resolve_room(room_name), reader, writer,
+                                         client_id, token, auto_relay.extras(line))
+            return
 
         if role == "AUTO_NETWORK":
             room = await resolve_room(room_name)
@@ -6446,7 +6452,8 @@ async def host_watchdog():
             for room in list(rooms.values()):
                 idle = room.host_idle_seconds()
 
-                if room.host_writer is None or idle <= timeout:
+                writer = room.host_writer
+                if writer is None or idle <= timeout:
                     continue
 
                 log(
@@ -6456,17 +6463,15 @@ async def host_watchdog():
                     "-> 判定房主开服连接掉线，拆连接（房间保留）",
                 )
 
+                # Close the observed socket before yielding to the audit DB.
+                # A later Host attachment must not inherit this timeout.
+                writer.close()
                 if store is not None:
                     await store.add_event(
                         "host_timeout",
                         room_id=room.name,
                         detail=f"控制连接静默 {int(idle)} 秒，自动拆掉开服连接（房间保留）",
                     )
-
-                # 关掉这条 socket -> host_control_loop 抛错 -> handle_host 的
-                # finally 走**唯一**的清理路径（里面决定"房间销毁还是保留"）。
-                with contextlib.suppress(Exception):
-                    room.host_writer.close()
 
         except asyncio.CancelledError:
             raise
@@ -7231,6 +7236,12 @@ async def main():
     )
 
     log(f"Relay listening on: {addresses}")
+    udp_transport = None
+    try:
+        udp_transport, _ = await asyncio.get_running_loop().create_datagram_endpoint(
+            lambda: udp_relay.relay, local_addr=(cfg.HOST, cfg.PORT))
+    except OSError as exc:
+        log(f"UDP relay bind failed: {exc}")
 
     status_task = asyncio.create_task(status_loop())
     sync_task = asyncio.create_task(db_sync_loop())
@@ -7262,6 +7273,8 @@ async def main():
         pass
 
     finally:
+        if udp_transport is not None:
+            udp_transport.close()
         for task in background_tasks:
             task.cancel()
 

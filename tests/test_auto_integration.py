@@ -21,15 +21,97 @@ from mclink.core.auto_peer import AutoPeer
 from mclink.core.direct_carry import PeerLink
 from mclink.core.engine import MCLinkEngine
 from mclink.config.settings import ClientConfig
+from mclink.core.udp_forward import Forwarder, Receiver
 
 
 class IntegrationTests(unittest.IsolatedAsyncioTestCase):
+    async def test_punch_queue_preserves_other_players_candidates(self):
+        owner = await self.member("host", create=True, mode="relay")
+        await owner.claim_host()
+        one = await self.member("one")
+        two = await self.member("two")
+        await one.send_direct("DIRECT_CAND 127.0.0.1 6101 from=two")
+        await two.send_direct("DIRECT_CAND 127.0.0.1 6102")
+        await self.ready(lambda: len(owner.peek_direct(("DIRECT_CAND",))) == 2)
+        self.assertIn("6102 from=two", await owner.wait_direct(("DIRECT_CAND",), peer="two"))
+        await owner.drain_direct(peer="two")
+        self.assertIn("6101 from=one", await owner.wait_direct(("DIRECT_CAND",), peer="one"))
+
+    async def check_application_udp(self, mode):
+        host, player, hm, pm, proxy_port = await self.start_cores(mode)
+        host_member, player_member = self.members[:2]
+        await player_member.send_started(True)
+        loop = asyncio.get_running_loop()
+        relay_udp, _ = await loop.create_datagram_endpoint(
+            lambda: relay.udp_relay.relay, local_addr=("127.0.0.1", self.port))
+        class Echo(asyncio.DatagramProtocol):
+            def connection_made(self, transport):
+                self.transport = transport
+            def datagram_received(self, payload, address):
+                self.transport.sendto(payload, address)
+        backend, _ = await loop.create_datagram_endpoint(
+            Echo, local_addr=("127.0.0.1", self.mc_port))
+        inbox = asyncio.Queue()
+        app, _ = await loop.create_datagram_endpoint(
+            lambda: Receiver(lambda data, _: inbox.put_nowait(data)),
+            remote_addr=("127.0.0.1", proxy_port))
+        host_links, player_links = {}, {}
+        def engine(member, links):
+            return SimpleNamespace(room_current=lambda: member,
+                                   room_direct=lambda: SimpleNamespace(_carriers=links),
+                                   _guest_token=member.guest_token)
+        hf = Forwarder(host, engine(host_member, host_links), True)
+        pf = Forwarder(player, engine(player_member, player_links), False)
+        tasks = [asyncio.create_task(forwarder.run()) for forwarder in (hf, pf)]
+        try:
+            await self.ready(lambda: len(hf.peers) == len(pf.peers) == 1)
+            h, p = next(iter(hf.peers.values()))[0], next(iter(pf.peers.values()))[0]
+            async def exchange(payload):
+                app.sendto(payload)
+                self.assertEqual(await asyncio.wait_for(inbox.get(), 3), payload)
+            if mode != "stun":
+                await self.ready(lambda: bool(h.relay_seen and p.relay_seen))
+                await exchange(b"via UDP relay")
+            if mode != "relay":
+                from mclink.core.direct_carry import PeerLink
+                hp, pp = await self.udp_peers(hm, pm, peer_type=AutoPeer if mode == "auto" else PeerLink)
+                host_links["player"], player_links["host"] = hp, pp
+                await self.ready(lambda: bool(h.direct_seen and p.direct_seen))
+                relay_protocol = relay.udp_relay.relay
+                receive = relay_protocol.datagram_received
+                def drop_relay_payload(data, addr):
+                    if data[20:21] != b"\x01":
+                        receive(data, addr)
+                with patch.object(relay_protocol, "datagram_received", drop_relay_payload):
+                    await exchange(b"via UDP direct")
+                if mode == "auto":
+                    hp.close()
+                    pp.close()
+                    await self.ready(lambda: not h.direct_seen and not p.direct_seen)
+                    await exchange(b"via UDP fallback")
+        finally:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            app.close()
+            backend.close()
+            relay_udp.close()
+
+    async def test_application_udp_relay(self):
+        await self.check_application_udp("relay")
+
+    async def test_application_udp_direct(self):
+        await self.check_application_udp("stun")
+
+    async def test_application_udp_auto_fallback(self):
+        await self.check_application_udp("auto")
+
     async def asyncSetUp(self):
         self.output = io.StringIO()
         self.redirect = contextlib.redirect_stdout(self.output)
         self.redirect.__enter__()
         relay.cfg.REQUIRE_ACCOUNT = False
-        relay.cfg.RELAY_VERSION = "5.1.6"
+        relay.cfg.RELAY_VERSION = "5.1.7"
         relay.rooms.clear()
         self.handlers = set()
         def dispatch(r, w):
@@ -201,6 +283,14 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
                 await writer.drain()
                 self.assertEqual(await asyncio.wait_for(reader.readexactly(len(payload)), 12), payload)
             await asyncio.gather(*(exchange(i, r, w) for i, (r, w) in enumerate(applications)))
+            control = host.control_writer
+            before = host._last_pong
+            # Keep all 63 flows active beyond the nine-second Host PONG deadline.
+            for _ in range(5):
+                await asyncio.sleep(2)
+                await asyncio.gather(*(exchange(i, r, w) for i, (r, w) in enumerate(applications)))
+            self.assertIs(host.control_writer, control)
+            self.assertGreater(host._last_pong, before)
             room = relay.rooms["auto-test"]
             self.assertEqual(room.room_capacity(), 64)
             self.assertEqual(len(room.members), 64)
@@ -279,6 +369,13 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(room.sessions[sid].auto, bridge)
         self.assertFalse(hs.done.is_set())
         self.assertFalse(ps.done.is_set())
+        fresh_reader, fresh_writer = await asyncio.open_connection("127.0.0.1", port)
+        self.writers.append(fresh_writer)
+        fresh_writer.write(b"new connection after fallback")
+        await fresh_writer.drain()
+        self.assertEqual(await asyncio.wait_for(fresh_reader.readexactly(29), 5),
+                         b"new connection after fallback")
+        self.assertEqual(self.backend_accepts, 2)
 
     async def test_status_refresh_and_cancel_keep_shared_udp_and_existing_tcp(self):
         host, player, hm, pm, port = await self.start_cores()
@@ -392,7 +489,7 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(ok)
         r, w = await asyncio.open_connection("127.0.0.1", self.port)
         self.writers.append(w)
-        w.write(b"JOIN __mclink__ old old - auto-test ver=5.1.6\n")
+        w.write(b"JOIN __mclink__ old old - auto-test ver=5.1.7\n")
         await w.drain()
         self.assertTrue((await r.readline()).startswith(b"OK JOIN"))
         ok, reason = await owner.set_conn_mode("auto")

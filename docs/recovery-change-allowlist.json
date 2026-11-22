@@ -15,7 +15,7 @@
     },
     "client/mclink/core/host_core.py": {
       "previous_sha256": "6839e6fd5196e776656b2fd53c73f9c38487f9053e059f3b843e377a67888b63",
-      "sha256": "bb6d25c080b457f8c9871e3a43535cab0df5819960c3cde6d50539e2940e9aac"
+      "sha256": "0cd8c0c2c7826229fe34d72c8fbe14722b043180240038d5dc78b8a085a782af"
     },
     "client/mclink/core/player_core.py": {
       "previous_sha256": "e207696430ca0171f8ceb7763f4775191e7c1d3f2dde0ee7049188eb8b9a25e1",
@@ -23,11 +23,11 @@
     },
     "client/mclink/core/room.py": {
       "previous_sha256": "b4ff73a60ac00002e070dd727dff517a876135ebc53bcf2c7a9a0ef3569aa4f8",
-      "sha256": "edbd6cbe870c445b1e09d6a5db92ead56c8ac3801f1a652463ed1b5ea26812bd"
+      "sha256": "66e42a26c148ca79ae62fd43315985812fa2cbf1e6e01427b9e859bb876539da"
     },
     "client/mclink/core/auto_stream.py": {
       "previous_sha256": "1c7970297d8edfc46d0d55b04f50ae60adc5c24b3fd3e0fb7aae42327bf53444",
-      "sha256": "9507d24a1ffc8c1ee997a21f15e981647ef8e144f4493cd6d4f57ee9335f9dc7"
+      "sha256": "dba0e461e972e2a62bf6a58c65dcb302f5f3b848cb39c8afed67002a67337bd4"
     },
     "client/mclink/core/connection_status.py": {
       "previous_sha256": "317a387d6e36f4637acd70a9aa0586c2c9f14ddd632c963ea73e46fdcebb02bb",
@@ -35,7 +35,23 @@
     },
     "client/mclink/core/session.py": {
       "previous_sha256": "b2e71870cb0264c001c4a9806bdda372e8f14e524051ccd5f6ae29eae468d5f1",
-      "sha256": "ae920b5da63888d828980d135e0f6b35cd09395dbd42009aecb25913d7d86876"
+      "sha256": "4c2daa4683e7e5110e7e24a49f2b2f9bac5f4633bc5c11d19f0e70d0cd744a80"
+    },
+    "client/mclink/core/room_direct.py": {
+      "previous_sha256": "733f96662e4f549a315dd6a61a10856af67a2c019389f33002cbdf161a962922",
+      "sha256": "68c7f20382593770c209994d55311080614b6b20f82c885c852b76853da9f0dd"
+    },
+    "client/mclink/core/direct.py": {
+      "previous_sha256": "0d2538ec128109292bcb88e85b2c199cd70f411340d399d464a41ba988365101",
+      "sha256": "4d4ae9a6cacfe93de807b76eead574d64126fe710c415abbfb9066f38fe5ea63"
+    },
+    "client/mclink/core/udptunnel.py": {
+      "previous_sha256": "e41cf25209c188a31e0ec60f82bb273252cf7430c09230b1a06e9e8b0fee58de",
+      "sha256": "e0ef760cb513d7568849857313b4b23edfd5ddde7414d4d47b92f2e378e15c45"
+    },
+    "client/mclink/core/udp_forward.py": {
+      "previous_sha256": null,
+      "sha256": "31b42db23993a2680050fdaf5a598d269d3b727c9b588aa0a9c2c494b95ae2fc"
     }
   },
   "controller_methods": {

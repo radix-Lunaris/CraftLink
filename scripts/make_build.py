@@ -95,10 +95,10 @@ def _unfingerprinted(rel, name):
 
     return False
 
-README_TEMPLATE = """CraftLink v5.1.6 切网身份恢复候选包
+README_TEMPLATE = """CraftLink v5.1.7 TCP/UDP 联机候选包
 ================================================================
 源码使用 Git 管理；本包由 scripts/make_build.py 生成。
-当前候选修复切网后旧开服通道重建无房主房间、重连终止后残留后台连接。
+当前候选支持 TCP/UDP 同端口转发，并修复多人打洞信号隔离和 AUTO 回落清理。
 公共客户端默认使用示例地址；老用户保留原设置，自用地址文件只在私有分发目录。
 
 已有部署必须先备份并保值迁移，不能先覆盖旧 Compose：
@@ -113,8 +113,8 @@ README_TEMPLATE = """CraftLink v5.1.6 切网身份恢复候选包
 私有配置不在本包中，严禁将其补进公共压缩包。
 客户端运行 CraftLink.exe；控制台排查使用 CraftLink-console.exe。
 源码运行先 pip install -r requirements.txt，再 python client/main.py。
-中继和两端客户端同步更新为 5.1.6；面板源码不变，复用原 5.1.1 面板镜像。
-v5.1.6 待 VPS 和真实切网验收。
+中继和两端客户端同步更新为 5.1.7；面板源码不变，复用原 5.1.1 面板镜像。
+v5.1.7 待 VPS 和真实切网验收。
 
 共 {count} 个文件：
 {listing}

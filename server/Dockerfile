@@ -36,7 +36,7 @@ FROM python:3.12-slim
 
 LABEL org.opencontainers.image.title="mc-link-relay"
 LABEL org.opencontainers.image.description="MC-Link TCP relay for Minecraft LAN session sharing"
-LABEL org.opencontainers.image.version="5.1.6"
+LABEL org.opencontainers.image.version="5.1.7"
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -83,7 +83,7 @@ COPY settings_service.py ./
 COPY stun_server.py ./
 COPY reset_password.py ./
 COPY room_members.py room_registry.py room_names.py ./
-COPY auto_relay.py ./
+COPY auto_relay.py udp_relay.py ./
 # 版本门：客户端与服务端必须同版本。这个文件由 scripts/sync-deploy.py
 # 从 client/mclink/config/settings.py 的 APP_VERSION 生成；漏了这行，
 # 容器里读到空字符串 = 门关着，旧客户端照用（正是用户不要的）。

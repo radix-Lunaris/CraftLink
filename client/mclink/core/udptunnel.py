@@ -747,6 +747,13 @@ class UdpHub:
                 break
             except Exception:
                 continue
+            application = getattr(self, "application_datagrams", None)
+            if application is not None and data.startswith(b"CL1D"):
+                try:
+                    application(data, addr)
+                except Exception:
+                    pass
+                continue
             # a STUN reply (or anything else waiting) gets first look
             try:
                 if self._match_pending(data, addr):

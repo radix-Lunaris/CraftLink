@@ -12,6 +12,7 @@ import time
 import uuid
 from collections import OrderedDict, deque
 from dataclasses import dataclass
+from .common import wait_transport_closed
 
 CAPABILITY = "auto_stream_v1"
 MAGIC = b"MCA5"
@@ -159,7 +160,7 @@ class DirectPath:
         return not self.detached and self.peer.started and not self.peer.stop.is_set()
 
     async def send(self, frame):
-        await self.peer.send_frame(frame)
+        await asyncio.wait_for(self.peer.send_frame(frame), 2.0)
 
     def close(self):
         # A stream owns a subscription, not the shared UDP carrier. AutoPeer's
@@ -323,6 +324,7 @@ class AutoStream:
             if len(self.flaps) >= self.config.flap_count:
                 self.retry_at = max(self.retry_at, now + self.config.flap_cooldown)
         self.publish()
+        self.spawn(self.ack("relay"))
         if epoch is None:
             self.spawn(self.both(Frame(Kind.FALLBACK, self.session, value=self.epoch)))
 
@@ -500,7 +502,7 @@ class AutoStream:
                 await self.writer.drain()
                 self.rx.pop(offset)
                 self.rx_delivered += len(data)
-                await self.ack()
+                await self.ack(self.active)
             if self.rx_fin is not None and self.rx_delivered == self.rx_fin and not self.remote_eof:
                 if self.writer.can_write_eof():
                     self.writer.write_eof()
@@ -509,6 +511,12 @@ class AutoStream:
                 await self.ack()
                 self.check_finished()
             await self.rx_wake.wait()
+
+    async def _watch_application(self):
+        await wait_transport_closed(self.writer)
+        if not self.done.is_set():
+            self.reason = "application_transport_closed"
+            self.done.set()
 
     async def _relay_reader(self, path):
         try:
@@ -634,7 +642,8 @@ class AutoStream:
         try:
             await self.attach_relay(self.paths["relay"])
             methods = (self._monitor,) if self.network_only else (
-                self._read_local, self._send_data, self._deliver, self._monitor)
+                self._read_local, self._send_data, self._deliver, self._monitor,
+                self._watch_application)
             for method in methods:
                 task = self.spawn(method())
                 task.add_done_callback(self._task_finished)

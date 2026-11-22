@@ -3453,6 +3453,7 @@ class RoomDirectLink:
                 raw = await room.wait_direct(
                     (punch_flow.BEACON_KEYWORD, "DIRECT_CAND"),
                     timeout=min(BEACON_REANNOUNCE_S, max(0.1, deadline - now)),
+                    peer=sess.peer,
                 )
 
             if raw is None:

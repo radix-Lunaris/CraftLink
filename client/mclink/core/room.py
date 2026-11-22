@@ -531,7 +531,7 @@ class RoomSession:
         #: 用队列而不是 future：这些行是"推"的，而且可能比我们开始等更早
         #: 到达（房主先发候选、玩家后加入）。future 会丢掉早到的那一条，
         #: 而队列不会 —— 丢一条候选 = 这次直连直接失败。
-        self._direct_lines = asyncio.Queue()
+        self._direct_lines = asyncio.Queue(maxsize=512)
 
         #: 每个对端**最后一次发来直连协调行**的时刻（monotonic），按 `from=` 归属。
         #:
@@ -1095,7 +1095,13 @@ class RoomSession:
 
         return found
 
-    async def wait_direct(self, keywords, timeout=10.0):
+    def direct_from_peer(self, line, peer):
+        if not peer:
+            return True
+        sender = next((part[5:] for part in line.split()[1:] if part.startswith("from=")), "")
+        return sender == peer if sender else len(self.state.peer_ids or ()) <= 1
+
+    async def wait_direct(self, keywords, timeout=10.0, peer=None):
         """
         Wait for a forwarded line whose keyword is one of `keywords`.
 
@@ -1120,7 +1126,8 @@ class RoomSession:
                 except (asyncio.TimeoutError, TimeoutError):
                     return None
 
-                if line.split()[0:1] and line.split()[0].upper() in wanted:
+                if (line.split()[0:1] and line.split()[0].upper() in wanted
+                        and self.direct_from_peer(line, peer)):
                     return line
 
                 held.append(line)
@@ -1165,7 +1172,7 @@ class RoomSession:
         finally:
             self._ingress_ack = None
 
-    async def drain_direct(self, keep=("DIRECT_PUNCH", "DIRECT_CAND")):
+    async def drain_direct(self, keep=("DIRECT_PUNCH", "DIRECT_CAND"), peer=None):
         """
         Drop the junk that an earlier round left in the queue — **but not the
         two lines that actually matter**.
@@ -1188,6 +1195,7 @@ class RoomSession:
         Returns how many lines were dropped, so the caller can say so.
         """
         kept = []
+        other_peers = []
         dropped = 0
         wanted = tuple(k.upper() for k in (keep or ()))
 
@@ -1197,6 +1205,9 @@ class RoomSession:
             except asyncio.QueueEmpty:
                 break
 
+            if not self.direct_from_peer(line, peer):
+                other_peers.append(line)
+                continue
             keyword = (line.split()[0:1] or [""])[0].upper()
 
             if keyword in wanted:
@@ -1207,7 +1218,7 @@ class RoomSession:
             else:
                 dropped += 1
 
-        for line in kept:
+        for line in other_peers + kept:
             self._direct_lines.put_nowait(line)
 
         return dropped
@@ -1752,6 +1763,8 @@ class RoomSession:
         # punch and the punch never misses a line that arrived early.
         for keyword in proto.DIRECT_FORWARDED:
             if upper.startswith(keyword):
+                if self._direct_lines.full():
+                    self._direct_lines.get_nowait()
                 with contextlib.suppress(asyncio.QueueFull):
                     self._direct_lines.put_nowait(text)
 

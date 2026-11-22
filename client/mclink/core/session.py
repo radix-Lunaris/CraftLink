@@ -1191,7 +1191,13 @@ class SessionBase:
         Derive the session state from the core and push a snapshot to the GUI
         about once per second.
         """
+        udp_task = None
         try:
+            if self.engine_provider is not None:
+                from .udp_forward import Forwarder
+                udp_task = asyncio.create_task(
+                    Forwarder(self.core, self.engine_provider, self.role == "host").run()
+                )
             if getattr(self.core, "auto_manager", None) is not None:
                 from .auto_network import supervise
                 self._auto_network_task = asyncio.create_task(supervise(self.core, self.room_provider))
@@ -1207,6 +1213,9 @@ class SessionBase:
         except asyncio.CancelledError:
             raise
         finally:
+            if udp_task is not None:
+                udp_task.cancel()
+                await asyncio.gather(udp_task, return_exceptions=True)
             if self._auto_network_task is not None:
                 self._auto_network_task.cancel()
                 await asyncio.gather(self._auto_network_task, return_exceptions=True)

@@ -701,25 +701,27 @@ class HostCore:
         socket from being silently dropped by NAT.
         """
         while self.running:
-
+            writer = None
             try:
                 await asyncio.sleep(CONTROL_PING_INTERVAL)
 
-                if not self.control_online or self.control_writer is None:
+                writer = self.control_writer
+                if not self.control_online or writer is None:
                     continue
 
                 stamp = f"{asyncio.get_event_loop().time():.3f}"
                 self._pending_pings[stamp] = asyncio.get_running_loop().time()
                 while len(self._pending_pings) > 8:
                     self._pending_pings.pop(next(iter(self._pending_pings)))
-                self.control_writer.write(f"PING {stamp}\n".encode())
-                await asyncio.wait_for(self.control_writer.drain(), 1.0)
+                writer.write(f"PING {stamp}\n".encode())
+                await asyncio.wait_for(writer.drain(), 1.0)
 
             except asyncio.CancelledError:
                 raise
 
             except Exception:
-                abort_writer(self.control_writer)
+                if writer is not None:
+                    abort_writer(writer)
                 continue
 
     def on_pong(self, line):

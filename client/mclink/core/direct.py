@@ -1045,7 +1045,7 @@ class DirectLink:
         logmod.event("direct.cand.sent", line=line)
 
         peer_line = await self.room.wait_direct(
-            (proto.ROLE_DIRECT_CAND,), timeout=PEER_CAND_TIMEOUT_S
+            (proto.ROLE_DIRECT_CAND,), timeout=PEER_CAND_TIMEOUT_S, peer=self.peer_id
         )
 
         if peer_line is None:
@@ -1274,6 +1274,7 @@ class DirectLink:
                     raw = await self.room.wait_direct(
                         (proto.ROLE_DIRECT_PUNCH,),
                         timeout=min(PUNCH_SYNC_WAIT_S, left),
+                        peer=self.peer_id,
                     )
 
                 if raw is None:
@@ -1414,7 +1415,7 @@ class DirectLink:
         # which is the opposite of what this round is trying to do.
         if self.room is not None:
             with contextlib.suppress(Exception):
-                dropped = await self.room.drain_direct()
+                dropped = await self.room.drain_direct(peer=self.peer_id)
 
                 if dropped:
                     self.log(

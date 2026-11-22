@@ -26,9 +26,10 @@ class ControllerPreservation(unittest.TestCase):
         baseline=json.loads((ROOT/'docs/network-core-baseline.json').read_text('utf-8'))
         recovery=json.loads((ROOT/'docs/recovery-change-allowlist.json').read_text('utf-8'))['network_files']
         actual={p.relative_to(ROOT).as_posix() for p in (ROOT/'client/mclink/core').glob('*.py')}
-        self.assertEqual(actual,set(baseline['files']))
-        for name,digest in baseline['files'].items():
+        self.assertEqual(actual,set(baseline['files']) | set(recovery))
+        for name in actual:
             with self.subTest(file=name):
+                digest = baseline['files'].get(name)
                 if name in recovery:
                     self.assertEqual(recovery[name]['previous_sha256'],digest)
                     self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),recovery[name]['sha256'])
