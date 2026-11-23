@@ -2778,6 +2778,14 @@ async def broadcast_member_state(room):
     # `peers=` / `names=` 都是**列表**，同一个 client_id 两条记录会让客户端
     # 画出 4 行却报 5 人（用户 2026-09-29 第 5 条）。
     roster = _roster_members(room)
+    routes = []
+    if room_conn_mode(room) == "auto":
+        for member in roster:
+            if member.client_id and member.client_id != host_cid:
+                route = auto_relay.member_route(room, member.client_id)
+                channel = "network" if route.get("channel") == "network" else "data"
+                routes.append(f"{member.client_id}:{route['active_path']}:{channel}")
+    route_token = ",".join(routes) or "-"
 
     # ============================================================================
     #  ★ v3.9.18：先把每人的那一行**全部拼好**，再并发发送
@@ -2892,7 +2900,7 @@ async def broadcast_member_state(room):
             # 为什么每次都带全表：客户端成员列表的「连接状态」列要显示的是
             # **每个人此刻**的状态，不是"变化过的人"；全表的增量代价是每行
             # 几十字节，换来的是"任何时刻收到的一行都自洽"。
-            f"conn={conn} "
+            f"conn={conn} routes={route_token} "
             "ips=" + (",".join(m.client_id + ":" + _auto_quote(getattr(m, "public_ip", ""), safe="") for m in room.members.values() if getattr(m, "public_ip", "")) or "-") + " "
             # ============================================================
             #  `mode=` —— 房间此刻的连接模式（ADDITIVE）

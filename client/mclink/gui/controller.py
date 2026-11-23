@@ -3365,6 +3365,7 @@ class ClientController:
 
 
     SESSION_MODE_REBUILD_COOLDOWN_S = 5.0
+    MODE_REBUILD_PENDING_MAX_S = 20.0
 
 
     def _sync_session_mode(self):
@@ -5725,7 +5726,7 @@ class ClientController:
                 # ★ 期限（2026-10-03）：这个标记**必须会过期**。它曾经被留成永久真，
                 #   结果把"真的 host 停服"和"掉线复位"全都吞掉了。
                 self._mode_rebuild_pending_until = (
-                    time.monotonic() + MODE_REBUILD_PENDING_MAX_S
+                    time.monotonic() + self.MODE_REBUILD_PENDING_MAX_S
                 )
             else:
                 self._mode_rebuild_pending = False

@@ -98,6 +98,8 @@ class NetworkStartupTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(room.sessions, "network tunnels must not occupy application slots")
         self.assertEqual(len(room.waiting_tunnels), 2)
         self.assertEqual(room.world_players(), 1, "network readiness is not entry into a game")
+        await self.ready(lambda: (host.room_state().auto_routes or {}).get("player")
+                         == ("direct", "network"))
         rows = host.snapshot()["connection_rows"]
         self.assertIn("网络隧道", rows[0]["display_text"])
         self.assertEqual(rows[0]["active_path"], "direct")
@@ -145,6 +147,8 @@ class NetworkStartupTests(unittest.IsolatedAsyncioTestCase):
             return any(s.metadata.get("channel") == "network" and s.path_ready("relay")
                        for s in engine.auto_manager.streams.values())
         await self.ready(lambda: ready(host) and ready(player), 5)
+        await self.ready(lambda: all((e.room_state().auto_routes or {}).get("player")
+                         == ("relay", "network") for e in (host, player)))
         self.assertEqual(self.backend_accepts, 0)
         self.assertTrue(all(row["active_path"] == "relay" for row in host.snapshot()["connection_rows"]))
         self.assertFalse(fixtures.relay.rooms["auto-test"].sessions)
@@ -189,7 +193,7 @@ class NetworkStartupTests(unittest.IsolatedAsyncioTestCase):
         reader, writer = await asyncio.open_connection("127.0.0.1", self.port)
         self.writers.append(writer)
         # Knowing member IDs/capabilities is insufficient to impersonate Host.
-        writer.write(b"AUTO_NETWORK auto-test player player wrong side=host peer=host caps=auto_stream_v1 ver=5.1.7\n")
+        writer.write(b"AUTO_NETWORK auto-test player player wrong side=host peer=host caps=auto_stream_v1 ver=5.1.8\n")
         await writer.drain()
         self.assertEqual((await reader.readline()).strip(), b"ERROR AUTO_NETWORK_DENIED")
 

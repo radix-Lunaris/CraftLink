@@ -111,7 +111,7 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.redirect = contextlib.redirect_stdout(self.output)
         self.redirect.__enter__()
         relay.cfg.REQUIRE_ACCOUNT = False
-        relay.cfg.RELAY_VERSION = "5.1.7"
+        relay.cfg.RELAY_VERSION = "5.1.8"
         relay.rooms.clear()
         self.handlers = set()
         def dispatch(r, w):
@@ -350,6 +350,8 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         sid = hs.session
         hp, pp = await self.udp_peers(hm, pm)
         await self.ready(lambda: hs.active == ps.active == "direct", 8)
+        await self.ready(lambda: all((m.state.auto_routes or {}).get("player") == ("direct", "data")
+                                     for m in self.members[:2]))
         await exchange(256000)
         room = relay.rooms["auto-test"]
         bridge = room.sessions[sid].auto
@@ -363,6 +365,8 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         hp.close()
         await exchange(256000)
         await self.ready(lambda: hs.active == ps.active == "relay", 4)
+        await self.ready(lambda: all((m.state.auto_routes or {}).get("player") == ("relay", "data")
+                                     for m in self.members[:2]))
         self.assertEqual(local_sockets, (id(hs.writer), id(ps.writer)))
         self.assertEqual(set(hm.streams), {sid})
         self.assertEqual(self.backend_accepts, 1)
@@ -489,7 +493,7 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(ok)
         r, w = await asyncio.open_connection("127.0.0.1", self.port)
         self.writers.append(w)
-        w.write(b"JOIN __mclink__ old old - auto-test ver=5.1.7\n")
+        w.write(b"JOIN __mclink__ old old - auto-test ver=5.1.8\n")
         await w.drain()
         self.assertTrue((await r.readline()).startswith(b"OK JOIN"))
         ok, reason = await owner.set_conn_mode("auto")

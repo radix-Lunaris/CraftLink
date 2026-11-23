@@ -35,4 +35,9 @@ async def run_stream(core, info, session, is_host, mc_reader, mc_writer,
         metadata={"generation": info["generation"],
                   "channel": info.get("channel", "data"),
                   "public_ip": info.get("player_ip" if is_host else "host_ip", "").replace("-", "")})
-    await stream.run()
+    try:
+        await stream.run()
+    finally:
+        if not stream.network_only:
+            core.log(f"[auto] game stream ended sid={session} reason={stream.reason} "
+                     f"sent={stream.bytes_up}B delivered={stream.rx_delivered}B")

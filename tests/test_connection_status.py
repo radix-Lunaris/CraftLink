@@ -77,6 +77,20 @@ class StatusTests(unittest.TestCase):
         self.assertIn("P2P 网络隧道仍就绪", row["display_text"])
         self.assertIn("当前应用连接由中继承载", row["display_text"])
 
+    def test_both_sides_show_the_same_confirmed_application_path(self):
+        shared = {"a": ("relay", "data")}
+        host = self.state(auto_routes=shared)
+        player = self.state(auto_routes=shared, is_host=False, client_id="a")
+        host_stream = dict(peer="a", active_path="relay", channel="data")
+        player_stream = dict(peer="host", active_path="direct", channel="network")
+        for state, stream in ((host, host_stream), (player, player_stream)):
+            row = connection_rows(state, [stream])[0]
+            self.assertEqual(row["active_path"], "relay")
+            self.assertIn("中继（游戏连接）", row["display_text"])
+        shared["a"] = ("transitioning", "data")
+        for state in (host, player):
+            self.assertIn("两端正在同步路径", connection_rows(state)[0]["display_text"])
+
 
 if __name__ == "__main__":
     unittest.main()

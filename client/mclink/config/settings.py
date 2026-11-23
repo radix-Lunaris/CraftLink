@@ -16,8 +16,8 @@ from ..core import protocol as proto
 
 APP_NAME = "CraftLink"
 APP_NAME_ZH = "方块联机"
-APP_VERSION = "5.1.7"
-APP_REVISION = "udp-recovery-r1"
+APP_VERSION = "5.1.8"
+APP_REVISION = "mode-route-r1"
 #: 版本不一致时让用户去下载新版的地址（HTTPS，443 端口）。
 #:
 #: 只出现在「需要更新」那个弹窗里。放在 settings 里而不是写死在界面代码里，

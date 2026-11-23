@@ -201,14 +201,38 @@ async def receive_report(room, member, text):
         if not isinstance(state, dict):
             return
         bridge = find_bridge(room, state.get("session_id"))
-        if bridge and bridge.report(member, state):
+        if bridge:
+            before = bridge.snapshot()["active_path"]
+            report_ok = bridge.report(member, state)
+        else:
+            report_ok = False
+        if report_ok:
             room.mark_dirty()
+            if (bridge.snapshot()["active_path"] != before or bridge.closed
+                    or not getattr(room, "_auto_routes_announced", False)):
+                schedule_route_broadcast(room)
     except (ValueError, TypeError, KeyError):
         return
 
 
+def schedule_route_broadcast(room):
+    task = getattr(room, "_auto_route_broadcast", None)
+    if task is not None and not task.done():
+        return
+
+    async def announce():
+        from room_members import broadcast_member_state
+        await asyncio.sleep(.25)
+        if not room.closed and not room.closing and room.conn_mode == "auto":
+            room._auto_routes_announced = True
+            await broadcast_member_state(room)
+
+    room._auto_route_broadcast = asyncio.create_task(announce())
+
+
 def member_route(room, client_id):
-    pairs = [p for p in room.sessions.values() if p.player_id == client_id and p.established]
+    pairs = [p for p in room.sessions.values() if p.player_id == client_id and p.established
+             and not getattr(getattr(p, "auto", None), "closed", False)]
     if not pairs:
         network = [b for b in getattr(room, "auto_networks", {}).values()
                    if b.pair.player_id == client_id and not b.closed]

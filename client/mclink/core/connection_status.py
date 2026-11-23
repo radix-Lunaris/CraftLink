@@ -13,6 +13,7 @@ def connection_rows(state, streams=(), direct_rows=(), carriers=None):
     conns = getattr(state, "member_conns", {}) or {}
     started = set(getattr(state, "started_ids", None) or [])
     mode = getattr(state, "conn_mode", "relay")
+    shared = getattr(state, "auto_routes", None)
     direct = {row["peer"]: row for row in direct_rows if row.get("peer")}
     result = []
     for peer in peers:
@@ -49,8 +50,14 @@ def connection_rows(state, streams=(), direct_rows=(), carriers=None):
             row["direct_rtt_ms"] = row.get("rtt_ms")
         else:
             row["active_path"] = "none"
+        channel = live[0].get("channel") if live else None
+        if mode == "auto" and shared is not None:
+            player = peer if getattr(state, "is_host", False) else state.client_id
+            path, channel = shared.get(player, ("none", None))
+            row["active_path"] = path
         path = row["active_path"]
         label = {"relay": "中继", "direct": "P2P 直连", "mixed": "切换中／部分直连",
+                 "transitioning": "两端正在同步路径", "unknown": "等待两端确认路径",
                  "reconnecting": "路径恢复中"}.get(path, "未开始")
         if path == "none" and running:
             if mode == "stun":
@@ -63,8 +70,10 @@ def connection_rows(state, streams=(), direct_rows=(), carriers=None):
                 label = "中继服务已启动，等待端口接入"
             else:
                 label = "建立中继网络隧道中"
-        if live and live[0].get("channel") == "network":
+        if channel == "network":
             label += "（网络隧道）"
+        elif channel == "data" and path != "none":
+            label += "（游戏连接）"
         details = [name, label, "公网 IP（服务端观察）：" + (row.get("public_ip") or "未知")]
         endpoint = row.get("direct_endpoint")
         if endpoint:

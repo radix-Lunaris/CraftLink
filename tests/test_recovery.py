@@ -317,6 +317,16 @@ class ControllerRecoveryTests(unittest.TestCase):
         self.assertFalse(c.engine.connection_requested)
         self.assertFalse(c.attempts)
 
+    def test_live_mode_change_arms_a_bounded_rebuild(self):
+        c = self.make_controller(True)
+        c._refresh_member_list = lambda: None
+        c._room_conn_mode = lambda: 'auto'
+        before = time.monotonic()
+        c._handle_core_event('conn_mode_changed', {'was_live': '1'})
+        self.assertTrue(c._mode_rebuild_pending)
+        self.assertEqual(c._mode_rebuild_from, 'auto')
+        self.assertGreaterEqual(c._mode_rebuild_pending_until, before + 20)
+
     def test_terminal_recovery_stops_core_with_current_generation(self):
         c = self.make_controller(True)
         with patch('mclink.gui.controller.threading.Thread') as worker:

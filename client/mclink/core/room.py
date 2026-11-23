@@ -293,6 +293,7 @@ class RoomState:
     #: 本身现算，每次变化立刻广播）。成员列表的「连接状态」列**以它为准**；
     #: 老中继没有这个 token -> 空表 -> 回退旧行为（房间里的人一律「已连接」）。
     member_conns: dict = field(default_factory=dict)
+    auto_routes: dict | None = None
 
     #: 中继在这次登录取的【我自己的】显示名（`OK CREATE` / `OK JOIN` 的 `you=`，
     #: 其次到 `names=` 里按自己的 client_id 查）。游客也有名字。
@@ -1864,6 +1865,13 @@ class RoomSession:
                     # 用户 2026-09-28：玩家断开后 host 那边必须立刻不再显示
                     # 「已连接」——成员列表的「连接状态」列以它为准。
                     self.state.member_conns = parse_member_conns(value)
+                elif key == "routes":
+                    routes = {}
+                    for route in value.split(","):
+                        fields = route.split(":")
+                        if len(fields) == 3 and fields[2] in ("data", "network"):
+                            routes[fields[0]] = (fields[1], fields[2])
+                    self.state.auto_routes = routes
                 elif key == "world":
                     with contextlib.suppress(ValueError):
                         self.state.world_players = int(value)
