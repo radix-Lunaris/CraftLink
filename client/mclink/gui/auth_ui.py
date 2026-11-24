@@ -111,6 +111,12 @@ def _button(parent, text, command, primary=False, width=0):
     )
 
 
+def _show_internal_build(parent):
+    if cfgmod.INTERNAL_BUILD_LABEL:
+        Label(parent, text=cfgmod.INTERNAL_BUILD_LABEL, bg=BG, fg=WARN,
+              font=FONT_BOLD).pack(anchor="w", pady=(0, 8))
+
+
 def _field_label(parent, text, bg=None):
     """
     输入框上方那行字段名：小一号、FG_DIM（和主界面的字段名一致）。
@@ -278,6 +284,7 @@ class LoginDialog(Dialog):
         # 14 三档间距。二级面板看着挤，一半原因就是每样东西都贴着下一件。
         outer = Frame(self, bg=BG)
         outer.pack(fill="both", expand=True, padx=26, pady=24)
+        _show_internal_build(outer)
 
         Label(
             outer,
@@ -730,6 +737,7 @@ class RoomsDialog(Dialog):
     def _build(self):
         outer = Frame(self, bg=BG)
         outer.pack(fill="both", expand=True, padx=18, pady=16)
+        _show_internal_build(outer)
 
         header = Frame(outer, bg=BG)
         header.pack(fill="x")
@@ -1177,6 +1185,7 @@ class RenameDialog(Dialog):
         # 和登录框同一套留白 / 同一套字段样式（见 LoginDialog._build）。
         outer = Frame(self, bg=BG)
         outer.pack(fill="both", expand=True, padx=26, pady=24)
+        _show_internal_build(outer)
 
         Label(
             outer,

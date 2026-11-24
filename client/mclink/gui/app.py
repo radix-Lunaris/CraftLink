@@ -430,6 +430,9 @@ class MCLinkApp(ClientController):
         win=Dialog(self.root); win.title(cfgmod.build_window_title(tr('房间成员'))); win.geometry('1200x650'); win.minsize(900,500)
         win.transient(self.root)
         self.member_window=win
+        if cfgmod.INTERNAL_BUILD_LABEL:
+            Label(win,text=cfgmod.INTERNAL_BUILD_LABEL,text_color=WARN,
+                  font=('Microsoft YaHei UI',12,'bold')).pack(anchor='w',padx=22,pady=(14,0))
         self.member_hint=Label(win,text='',fg=FG_DIM); self.member_hint.pack(fill='x',padx=22,pady=18)
         self.member_table=ctk.CTkScrollableFrame(win,fg_color=CARD,corner_radius=12)
         self.member_table.pack(fill='both',expand=True,padx=22,pady=(0,22))
