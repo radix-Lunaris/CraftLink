@@ -95,7 +95,7 @@ def _unfingerprinted(rel, name):
 
     return False
 
-README_TEMPLATE = """CraftLink v5.2.0-exp.1 内测版 · 实验室构建
+README_TEMPLATE = """CraftLink v6.0.0-Beta.1 内测版 · 实验室构建
 ================================================================
 源码使用 Git 管理；本包由 scripts/make_build.py 生成。
 此构建仅供内部测试。

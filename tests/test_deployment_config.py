@@ -43,6 +43,10 @@ class DeploymentTests(unittest.TestCase):
         self.assertTrue(_version_newer("5.2.0", "5.2.0-exp.10"))
         self.assertFalse(_version_newer("5.2.0-exp.10", "5.2.0"))
         self.assertEqual(windows_version("5.2.0-exp.10"), ((5, 2, 0, 10), True))
+        self.assertTrue(_version_newer("6.0.0-Beta.1", "5.2.0-exp.10"))
+        self.assertTrue(_version_newer("6.0.0-Beta.10", "6.0.0-Beta.9"))
+        self.assertTrue(_version_newer("6.0.0", "6.0.0-Beta.10"))
+        self.assertEqual(windows_version("6.0.0-Beta.1"), ((6, 0, 0, 1), True))
         self.assertEqual(windows_version("5.1.8"), ((5, 1, 8, 0), False))
 
     def test_roundtrip_idempotency_and_conflict_preserves_file(self):

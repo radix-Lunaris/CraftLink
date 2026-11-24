@@ -15,7 +15,7 @@ CLIENT = ROOT / "client"
 
 
 def windows_version(version):
-    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-exp\.([1-9]\d*))?", version)
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-(?:exp|Beta)\.([1-9]\d*))?", version)
     if not match:
         raise ValueError(f"Unsupported Windows build version: {version}")
     major, minor, patch, experiment = match.groups()

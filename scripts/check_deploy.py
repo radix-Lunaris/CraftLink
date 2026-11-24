@@ -215,12 +215,12 @@ def _version_tuple(value):
 def _version_newer(candidate, previous):
     """`candidate` 是否严格大于 `previous`（逐段比，长度不齐补 0）。"""
     def release_order(value):
-        match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-exp\.([1-9]\d*))?", str(value).strip())
+        match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-(exp|Beta)\.([1-9]\d*))?", str(value).strip())
         if match is None:
             return None
-        major, minor, patch, experiment = match.groups()
-        # A plain release supersedes all experiments for that base version.
-        return int(major), int(minor), int(patch), experiment is None, int(experiment or 0)
+        major, minor, patch, channel, iteration = match.groups()
+        channel_order = {"exp": 0, "Beta": 1, None: 2}
+        return int(major), int(minor), int(patch), channel_order[channel], int(iteration or 0)
 
     proposed, last = release_order(candidate), release_order(previous)
     if proposed is not None and last is not None:

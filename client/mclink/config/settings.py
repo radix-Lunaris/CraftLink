@@ -16,9 +16,9 @@ from ..core import protocol as proto
 
 APP_NAME = "CraftLink"
 APP_NAME_ZH = "方块联机"
-APP_VERSION = "5.2.0-exp.1"
+APP_VERSION = "6.0.0-Beta.1"
 APP_REVISION = "mode-route-r1"
-INTERNAL_BUILD_LABEL = "内测版 · 实验室构建 · 仅供内部测试" if "-exp." in APP_VERSION else ""
+INTERNAL_BUILD_LABEL = "内测版 · 实验室构建 · 仅供内部测试" if "-Beta." in APP_VERSION else ""
 #: 版本不一致时让用户去下载新版的地址（HTTPS，443 端口）。
 #:
 #: 只出现在「需要更新」那个弹窗里。放在 settings 里而不是写死在界面代码里，
