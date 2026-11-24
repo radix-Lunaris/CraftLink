@@ -214,6 +214,17 @@ def _version_tuple(value):
 
 def _version_newer(candidate, previous):
     """`candidate` 是否严格大于 `previous`（逐段比，长度不齐补 0）。"""
+    def release_order(value):
+        match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-exp\.([1-9]\d*))?", str(value).strip())
+        if match is None:
+            return None
+        major, minor, patch, experiment = match.groups()
+        # A plain release supersedes all experiments for that base version.
+        return int(major), int(minor), int(patch), experiment is None, int(experiment or 0)
+
+    proposed, last = release_order(candidate), release_order(previous)
+    if proposed is not None and last is not None:
+        return proposed > last
     a = _version_tuple(candidate)
     b = _version_tuple(previous)
 

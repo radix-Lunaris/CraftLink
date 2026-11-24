@@ -1,9 +1,10 @@
-"""AUTO relay attachment lifetime, deliberately opaque to game frames."""
+"""AUTO relay attachment lifetime and frame-level traffic accounting."""
 import asyncio
 import contextlib
 import hmac
 import json
 import secrets
+import struct
 import time
 import uuid
 from types import SimpleNamespace
@@ -13,6 +14,46 @@ STATE_TTL = 10.0
 DETACHED_TTL = 45.0
 MAX_STREAMS_PER_MEMBER = 16
 MAX_STREAMS_PER_ROOM = 256
+FRAME_HEADER = struct.Struct("!4sBBH16sQQI")
+MAX_FRAME_PAYLOAD = 64 * 1024
+
+
+class RelayAccounting:
+    """Count forwarded DATA payload bytes without buffering their contents."""
+
+    def __init__(self, session_id):
+        self.session = uuid.UUID(hex=session_id).bytes
+        self.header = bytearray()
+        self.remaining = 0
+        self.is_data = False
+        self.valid = True
+
+    def forwarded_data_bytes(self, data):
+        if not self.valid:
+            return 0
+        position = count = 0
+        while position < len(data):
+            if self.remaining:
+                size = min(self.remaining, len(data) - position)
+                if self.is_data:
+                    count += size
+                self.remaining -= size
+                position += size
+                continue
+            size = min(FRAME_HEADER.size - len(self.header), len(data) - position)
+            self.header.extend(data[position:position + size])
+            position += size
+            if len(self.header) < FRAME_HEADER.size:
+                break
+            magic, version, kind, flags, session, _, _, length = FRAME_HEADER.unpack(self.header)
+            self.header.clear()
+            if (magic != b"MCA5" or version != 1 or not 1 <= kind <= 10
+                    or flags & ~1 or session != self.session or length > MAX_FRAME_PAYLOAD):
+                self.valid = False
+                break
+            self.is_data = kind == 1
+            self.remaining = length
+        return count
 
 
 def extras(line):
@@ -57,6 +98,8 @@ class AutoBridge:
         self.last_seen = time.monotonic()
         self.reports = {}
         self.finished = set()
+        self.relay_data_bytes = {"host": 0, "player": 0}
+        self.relay_accounting_valid = True
 
     def handshake(self, side, word):
         return (f"{word} {self.pair.session_id} proto={CAPABILITY} "
@@ -89,12 +132,15 @@ class AutoBridge:
         return attachment
 
     async def _pump(self, source, target, side):
+        accounting = RelayAccounting(self.pair.session_id)
         while True:
             data = await source.reader.read(65536)
             if not data:
                 return
             target.writer.write(data)
             await target.writer.drain()
+            self.relay_data_bytes[side] += accounting.forwarded_data_bytes(data)
+            self.relay_accounting_valid &= accounting.valid
             if side == "host":
                 self.pair.tunnel_bytes += len(data)
             else:
@@ -192,6 +238,7 @@ class AutoBridge:
                 "direct_endpoint": host.get("direct_endpoint", "") if fresh else "",
                 "direct_rtt_ms": host.get("direct_rtt_ms") if fresh else None,
                 "relay_rtt_ms": host.get("relay_rtt_ms") if fresh else None,
+                "relay_data_bytes": dict(self.relay_data_bytes) if self.relay_accounting_valid else None,
                 "stale": not fresh}
 
 

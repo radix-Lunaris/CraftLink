@@ -18,6 +18,8 @@ sys.path.insert(0, str(ROOT / 'client'))
 import deploy_config as config
 import migrate_config as migration
 import check_secrets
+from check_deploy import _version_newer
+from build_client import windows_version
 import make_build
 
 
@@ -35,6 +37,14 @@ def models():
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_experiment_version_order_and_windows_resource(self):
+        self.assertTrue(_version_newer("5.2.0-exp.1", "5.1.8"))
+        self.assertTrue(_version_newer("5.2.0-exp.10", "5.2.0-exp.9"))
+        self.assertTrue(_version_newer("5.2.0", "5.2.0-exp.10"))
+        self.assertFalse(_version_newer("5.2.0-exp.10", "5.2.0"))
+        self.assertEqual(windows_version("5.2.0-exp.10"), ((5, 2, 0, 10), True))
+        self.assertEqual(windows_version("5.1.8"), ((5, 1, 8, 0), False))
+
     def test_roundtrip_idempotency_and_conflict_preserves_file(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / '.env'

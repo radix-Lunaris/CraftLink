@@ -7,7 +7,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
-from auto_relay import AutoBridge, CAPABILITY, STATE_TTL
+from auto_relay import AutoBridge, CAPABILITY, RelayAccounting, STATE_TTL
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "client"))
+from mclink.core.auto_stream import Frame, Kind
 
 
 class Writer:
@@ -84,6 +87,38 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(b.ends)
         self.assertFalse(b.authorized("player", "player", "player-guest-token",
                                       b.keys["player"], b.generation))
+
+    async def test_pump_counts_split_data_and_excludes_control_payload(self):
+        bridge = self.bridge
+        bridge.pair.tunnel_bytes = 0
+        session = bridge.pair.session_id
+        raw = (Frame(Kind.PING, session, payload=b"probe").encode()
+               + Frame(Kind.DATA, session, payload=b"game bytes").encode())
+        reader = asyncio.StreamReader()
+        for start in range(0, len(raw), 7):
+            reader.feed_data(raw[start:start + 7])
+        reader.feed_eof()
+        # Exercise TCP fragmentation independently of StreamReader coalescing.
+        async def read(_):
+            return await reader.read(7)
+        forwarded = bytearray()
+        async def drain():
+            pass
+        await bridge._pump(SimpleNamespace(reader=SimpleNamespace(read=read)),
+                           SimpleNamespace(writer=SimpleNamespace(write=forwarded.extend, drain=drain)),
+                           "host")
+        self.assertEqual(forwarded, raw)
+        self.assertEqual(bridge.pair.tunnel_bytes, len(raw))
+        self.assertEqual(bridge.snapshot()["relay_data_bytes"], {"host": 10, "player": 0})
+
+    def test_accounting_never_realigns_to_a_foreign_session(self):
+        session = self.bridge.pair.session_id
+        accounting = RelayAccounting(session)
+        foreign = Frame(Kind.DATA, uuid.uuid4().hex, payload=b"foreign").encode()
+        correct = Frame(Kind.DATA, session, payload=b"correct").encode()
+        self.assertEqual(accounting.forwarded_data_bytes(foreign + correct), 0)
+        self.assertFalse(accounting.valid)
+        self.assertEqual(accounting.forwarded_data_bytes(correct), 0)
 
 
 if __name__ == "__main__":

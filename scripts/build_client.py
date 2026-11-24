@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import platform
+import re
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT = ROOT / "client"
+
+
+def windows_version(version):
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-exp\.([1-9]\d*))?", version)
+    if not match:
+        raise ValueError(f"Unsupported Windows build version: {version}")
+    major, minor, patch, experiment = match.groups()
+    parts = tuple(int(part) for part in (major, minor, patch, experiment or "0"))
+    if any(part > 65535 for part in parts):
+        raise ValueError(f"Windows build version component out of range: {version}")
+    return parts, bool(experiment)
 
 
 def main():
@@ -28,7 +40,9 @@ def main():
     from mclink.config.settings import APP_VERSION, APP_REVISION
     import PyInstaller
     import PIL
-    version_tuple = tuple(int(v) for v in APP_VERSION.split(".")) + (0,)
+    version_tuple, experimental = windows_version(APP_VERSION)
+    file_flags = 0x2 if experimental else 0x0
+    description = "CraftLink Minecraft 联机工具" + ("（实验版）" if experimental else "")
     log_dir = ROOT / "logs"
     log_dir.mkdir(exist_ok=True)
     log_path = log_dir / "client-build.log"
@@ -43,10 +57,10 @@ def main():
         resource = tmp / "version.txt"
         resource.write_text(f'''VSVersionInfo(
   ffi=FixedFileInfo(filevers={version_tuple!r}, prodvers={version_tuple!r},
-      mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
+      mask=0x3f, flags={file_flags:#x}, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
   kids=[StringFileInfo([StringTable('040904B0', [
       StringStruct('CompanyName', 'CraftLink'),
-      StringStruct('FileDescription', 'CraftLink Minecraft 联机工具'),
+      StringStruct('FileDescription', '{description}'),
       StringStruct('FileVersion', '{APP_VERSION}'),
       StringStruct('ProductVersion', '{APP_VERSION}'),
       StringStruct('ProductName', 'CraftLink')])]),
