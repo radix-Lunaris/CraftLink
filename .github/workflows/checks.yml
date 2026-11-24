@@ -1,7 +1,7 @@
 name: source-checks
 on:
   push:
-    branches: [dev, master]
+    branches: [dev, master, feat/experimental-peer-relay]
   pull_request:
   workflow_dispatch:
 permissions:

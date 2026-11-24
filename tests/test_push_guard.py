@@ -5,7 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from check_push import validate_updates
+from check_push import EXPERIMENT_REF, ZERO, validate_updates
 
 
 class PushGuardTests(unittest.TestCase):
@@ -16,6 +16,17 @@ class PushGuardTests(unittest.TestCase):
 
     def test_exact_authorized_dev_update(self):
         self.assertEqual(validate_updates(self.remote,self.updates,self.approval),('1'*40,'2'*40))
+
+    def test_experiment_creation_requires_its_own_exact_approval(self):
+        commit, base = '1' * 40, '2' * 40
+        updates = [[EXPERIMENT_REF, commit, EXPERIMENT_REF, ZERO]]
+        approval = dict(status='approved', ref=EXPERIMENT_REF, commit=commit,
+                        previous=ZERO, base=base)
+        self.assertEqual(validate_updates(self.remote, updates, approval), (commit, ZERO))
+        with self.assertRaises(ValueError):
+            validate_updates(self.remote, updates, self.approval)
+        with self.assertRaises(ValueError):
+            validate_updates(self.remote, updates, dict(approval, base=ZERO))
 
     def test_reject_other_refs_commits_remotes_and_consumed_approval(self):
         variants = [
