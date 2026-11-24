@@ -16,8 +16,9 @@ from ..core import protocol as proto
 
 APP_NAME = "CraftLink"
 APP_NAME_ZH = "方块联机"
-APP_VERSION = "5.1.8"
+APP_VERSION = "5.2.0-exp.1"
 APP_REVISION = "mode-route-r1"
+INTERNAL_BUILD_LABEL = "内测版 · 实验室构建 · 仅供内部测试" if "-exp." in APP_VERSION else ""
 #: 版本不一致时让用户去下载新版的地址（HTTPS，443 端口）。
 #:
 #: 只出现在「需要更新」那个弹窗里。放在 settings 里而不是写死在界面代码里，
@@ -75,7 +76,11 @@ def version_line():
     软件名（CraftLink）**不跟随语言**：中文界面、英文界面、日文界面下它都一样。
     后面那截说明文字才翻译（见 gui/i18n.py 的 "Minecraft 联机"）。
     """
-    return f"{APP_NAME} v{APP_VERSION} [{APP_REVISION}] (构建 {build_stamp()})"
+    return build_window_title(f"{APP_NAME} v{APP_VERSION} [{APP_REVISION}] (构建 {build_stamp()})")
+
+
+def build_window_title(title):
+    return f"{title} | {INTERNAL_BUILD_LABEL}" if INTERNAL_BUILD_LABEL else title
 
 
 def config_dir():

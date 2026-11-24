@@ -6,12 +6,10 @@ PHP web panel (which renders it).
 
 Security model
 --------------
-* The port is NEVER published to the host. The compose file uses `expose`, so
-  it is only reachable from other containers on the same Docker network. The
-  PHP panel talks to it as http://mc-relay:19101 .
-* Every request must carry `Authorization: Bearer <MCLINK_ADMIN_API_TOKEN>`.
-* The API only exposes JSON. It never renders HTML and never proxies the
-  Minecraft port.
+* The standard compose stack exposes the API to the PHP panel on its own
+  Docker network. The lightweight stack publishes it on host loopback for SSH.
+* Operational requests require `Authorization: Bearer <MCLINK_ADMIN_API_TOKEN>`.
+  The optional lightweight page is a static shell for the authenticated API.
 
 The relay continues to work normally when this API is disabled, when the
 token is wrong, or when the caller does not exist.
@@ -21,6 +19,8 @@ import asyncio
 import contextlib
 import hmac
 import json
+import os
+from pathlib import Path
 import time
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -149,6 +149,14 @@ class AdminAPI:
             method, path, query, headers, body = request
 
             self.request_count += 1
+
+            if method == "GET" and path == "/" and os.environ.get("MCLINK_LITE_PANEL") == "1":
+                page = Path(__file__).with_name("lite_panel.html").read_bytes()
+                await self._respond_raw(writer, RawResponse(page, "text/html; charset=utf-8",
+                    extra_headers={"X-Content-Type-Options": "nosniff",
+                                   "Referrer-Policy": "no-referrer",
+                                   "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'"}))
+                return
 
             if not self._authorized(headers):
                 await self._respond(

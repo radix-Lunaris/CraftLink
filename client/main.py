@@ -16,7 +16,7 @@ def main():
                         help="逐个检测 STUN/DNS 并保存报告；不更改网络设置")
     parser.add_argument("--relay-host", help="网络诊断的中继域名；默认使用已有配置")
     args = parser.parse_args()
-    from mclink.config.settings import APP_VERSION, APP_REVISION
+    from mclink.config.settings import APP_VERSION, APP_REVISION, INTERNAL_BUILD_LABEL
     if args.network_report:
         import asyncio
         from mclink.config.settings import load_config
@@ -53,6 +53,8 @@ def main():
                 try:
                     app = MCLinkApp(root)
                     assert not app._verify_form_bindings()
+                    if INTERNAL_BUILD_LABEL:
+                        assert INTERNAL_BUILD_LABEL in root.title()
                     for page in app.PAGE_TITLES:
                         app.show_page(page)
                     root.update_idletasks()

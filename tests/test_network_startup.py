@@ -20,7 +20,7 @@ import test_auto_integration as fixtures
 import stun_server
 from mclink.core import stun
 from mclink.core.engine import MCLinkEngine
-from mclink.config.settings import ClientConfig
+from mclink.config.settings import APP_VERSION, ClientConfig
 
 
 class NetworkStartupTests(unittest.IsolatedAsyncioTestCase):
@@ -193,7 +193,8 @@ class NetworkStartupTests(unittest.IsolatedAsyncioTestCase):
         reader, writer = await asyncio.open_connection("127.0.0.1", self.port)
         self.writers.append(writer)
         # Knowing member IDs/capabilities is insufficient to impersonate Host.
-        writer.write(b"AUTO_NETWORK auto-test player player wrong side=host peer=host caps=auto_stream_v1 ver=5.1.8\n")
+        writer.write(("AUTO_NETWORK auto-test player player wrong side=host peer=host "
+                      f"caps=auto_stream_v1 ver={APP_VERSION}\n").encode())
         await writer.drain()
         self.assertEqual((await reader.readline()).strip(), b"ERROR AUTO_NETWORK_DENIED")
 

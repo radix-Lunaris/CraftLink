@@ -36,7 +36,7 @@ FROM python:3.12-slim
 
 LABEL org.opencontainers.image.title="mc-link-relay"
 LABEL org.opencontainers.image.description="MC-Link TCP relay for Minecraft LAN session sharing"
-LABEL org.opencontainers.image.version="5.1.8"
+LABEL org.opencontainers.image.version="5.2.0-exp.1"
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -78,6 +78,8 @@ RUN pip install --no-cache-dir \
 #                              `from relay_server import rooms` 会导入第二个空副本，
 #                              面板关房就会一直回「房间不存在」）
 COPY relay_config.py relay_server.py healthcheck.py ./
+COPY file_accounts.py ./
+COPY lite_panel.html ./
 COPY admin_api.py auth.py db_schema.py db_store.py gatekeeper.py ./
 COPY settings_service.py ./
 COPY stun_server.py ./
@@ -93,7 +95,7 @@ COPY relay_log.py relay_events.py ./
 
 # Writable directory for the status file. Owned by the unprivileged user so a
 # mounted volume also gets the right owner on first use.
-RUN mkdir -p /app/status \
+RUN mkdir -p /app/status /app/accounts \
     && useradd --create-home --uid 10001 mclink \
     && chown -R mclink:mclink /app
 

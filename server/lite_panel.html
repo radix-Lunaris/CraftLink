@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CraftLink 实验管理</title>
+<h1>CraftLink 实验管理</h1>
+<label>管理令牌 <input id="token" type="password" autocomplete="off"></label>
+<button id="refresh" type="button">刷新</button>
+<p id="message" role="status"></p>
+<h2>运行状态</h2>
+<pre id="stats"></pre>
+<h2>房间</h2>
+<ul id="rooms"></ul>
+<script>
+const token = document.querySelector('#token');
+const message = document.querySelector('#message');
+const stats = document.querySelector('#stats');
+const rooms = document.querySelector('#rooms');
+
+async function request(path, body) {
+  const headers = {Authorization: 'Bearer ' + token.value.trim()};
+  const options = {headers, cache: 'no-store'};
+  if (body) {
+    headers['Content-Type'] = 'application/json';
+    options.method = 'POST';
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(path, options);
+  const result = await response.json();
+  if (!response.ok || !result.ok) {
+    throw new Error(result.message || result.error || '请求失败');
+  }
+  return result.data;
+}
+
+async function refresh() {
+  try {
+    const [summary, list] = await Promise.all([request('/stats'), request('/rooms')]);
+    stats.textContent = JSON.stringify(summary, null, 2);
+    rooms.replaceChildren();
+    for (const room of list) {
+      const name = room.name || room.room;
+      const row = document.createElement('li');
+      row.append(document.createTextNode(name + ' '));
+      if (name) {
+        const close = document.createElement('button');
+        close.textContent = '关闭房间';
+        close.onclick = async () => {
+          if (!confirm('关闭房间 ' + name + '？')) return;
+          close.disabled = true;
+          try {
+            await request('/rooms/revoke', {room: room.room_id || name});
+            await refresh();
+          } catch (error) {
+            message.textContent = error.message;
+            close.disabled = false;
+          }
+        };
+        row.append(close);
+      }
+      rooms.append(row);
+    }
+    message.textContent = list.length ? '' : '暂无房间';
+  } catch (error) {
+    stats.textContent = '';
+    rooms.replaceChildren();
+    message.textContent = error.message;
+  }
+}
+
+document.querySelector('#refresh').onclick = refresh;
+</script>
+</html>

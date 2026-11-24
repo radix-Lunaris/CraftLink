@@ -219,6 +219,7 @@ DB_ENABLED = _env_str("MCLINK_DB_ENABLED", "1") not in ("0", "false", "False")
 
 DB_HOST = _env_str("MCLINK_DB_HOST", "web-mysql80")
 DB_PORT = _env_int("MCLINK_DB_PORT", 3306)
+ACCOUNT_FILE = _env_str("MCLINK_ACCOUNT_FILE", "")
 DB_NAME = _env_str("MCLINK_DB_NAME", "mclink")
 DB_USER = _env_str("MCLINK_DB_USER", "mclink")
 DB_PASSWORD = _env_str("MCLINK_DB_PASSWORD", "")

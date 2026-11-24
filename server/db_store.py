@@ -1507,9 +1507,39 @@ class SafeStore(RelayStore):
         return await self._guard("all_settings") or {}
 
 
+class FileAccountStore(MemoryStore):
+    """Load an operator-managed password snapshot into the normal auth stack."""
+
+    name = "file-accounts"
+
+    def __init__(self, path):
+        super().__init__()
+        self.path = path
+
+    async def connect(self):
+        from file_accounts import load_accounts
+
+        accounts = load_accounts(self.path)
+        self.users.clear()
+        for name, password_hash in accounts.items():
+            await super().create_user(name, password_hash)
+        await super().connect()
+
+    async def create_user(self, *args, **kwargs):
+        return False
+
+    set_user_role = set_user_disabled = set_user_password = delete_user = create_user
+
+    async def rename_user(self, *args, **kwargs):
+        return False, "实验账号由 SSH 管理", None
+
+
 def build_store(config):
     """Create the store described by the configuration."""
     if not config.DB_ENABLED:
+        account_file = getattr(config, "ACCOUNT_FILE", "")
+        if account_file:
+            return SafeStore(FileAccountStore(account_file))
         return SafeStore(MemoryStore())
 
     return SafeStore(MySQLStore(config))

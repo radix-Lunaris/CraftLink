@@ -1,13 +1,20 @@
 import asyncio
+import json
 import sys
+import tempfile
 import time
 import unittest
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
 from auto_relay import AutoBridge, CAPABILITY, RelayAccounting, STATE_TTL
+from admin_api import AdminAPI
+from auth import hash_password
+from db_store import FileAccountStore
+from gatekeeper import AccountService, LoginThrottle, TokenManager
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "client"))
 from mclink.core.auto_stream import Frame, Kind
@@ -119,6 +126,50 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(accounting.forwarded_data_bytes(foreign + correct), 0)
         self.assertFalse(accounting.valid)
         self.assertEqual(accounting.forwarded_data_bytes(correct), 0)
+
+
+class LightweightRelayTests(unittest.IsolatedAsyncioTestCase):
+    async def test_file_accounts_login_and_deletion_after_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "accounts.json"
+            path.write_text(json.dumps({"alice": hash_password("test-password")}), encoding="utf-8")
+            store = FileAccountStore(path)
+            await store.connect()
+            service = AccountService(store, TokenManager(), LoginThrottle())
+            ok, payload, _ = await service.login("alice", "test-password", "127.0.0.1")
+            self.assertTrue(ok)
+            self.assertEqual(payload["username"], "alice")
+            self.assertFalse(await store.delete_user("alice"))
+            path.write_text("{}", encoding="utf-8")
+            await store.connect()
+            self.assertIsNone(await store.get_user("alice"))
+
+    async def test_lightweight_panel_preserves_admin_api_auth(self):
+        async def stats():
+            return {"rooms": 1}
+
+        api = AdminAPI("127.0.0.1", 0, {"stats": stats}, None, None, None, token="test-admin-token")
+        server = await api.start()
+        self.addAsyncCleanup(api.stop)
+        port = server.sockets[0].getsockname()[1]
+
+        async def get(path, token=None):
+            reader, writer = await asyncio.open_connection("127.0.0.1", port)
+            try:
+                authorization = f"Authorization: Bearer {token}\r\n" if token else ""
+                writer.write(f"GET {path} HTTP/1.1\r\nHost: localhost\r\n{authorization}\r\n".encode())
+                await writer.drain()
+                return await asyncio.wait_for(reader.read(), 2)
+            finally:
+                writer.close()
+                await writer.wait_closed()
+
+        with patch.dict("os.environ", {"MCLINK_LITE_PANEL": "1"}):
+            panel = await get("/")
+            self.assertIn(b"text/html", panel)
+            self.assertNotIn(b"test-admin-token", panel)
+            self.assertIn(b"401 Unauthorized", await get("/stats"))
+            self.assertIn(b"200 OK", await get("/stats", "test-admin-token"))
 
 
 if __name__ == "__main__":

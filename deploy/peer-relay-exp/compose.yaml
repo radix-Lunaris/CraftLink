@@ -1,92 +1,34 @@
 name: craftlink-peer-relay-exp
 
-x-logging: &logging
-  driver: json-file
-  options:
-    max-size: 5m
-    max-file: "3"
-
-x-craftlink-db: &craftlink-db
-  MCLINK_DB_HOST: database
-  MCLINK_DB_NAME: craftlink_exp
-  MCLINK_DB_USER: craftlink_exp
-  MCLINK_DB_PASSWORD: ${EXPERIMENT_DB_PASSWORD:?Set the experiment database password}
-  MCLINK_ADMIN_API_TOKEN: ${EXPERIMENT_ADMIN_TOKEN:?Set the experiment API token}
-
 services:
   relay:
     image: ${EXPERIMENT_RELAY_IMAGE:?Set the experiment relay image}
     restart: unless-stopped
-    depends_on:
-      database:
-        condition: service_healthy
     ports:
       - "${EXPERIMENT_BIND_IPV4:?Set the instance interface IPv4}:${EXPERIMENT_RELAY_PORT:-19100}:19100/tcp"
       - "${EXPERIMENT_BIND_IPV4:?Set the instance interface IPv4}:${EXPERIMENT_RELAY_PORT:-19100}:19100/udp"
-      - "${EXPERIMENT_BIND_IPV4:?Set the instance interface IPv4}:${EXPERIMENT_STUN_PORT:-3478}:${EXPERIMENT_STUN_PORT:-3478}/udp"
-      - "${EXPERIMENT_BIND_IPV4:?Set the instance interface IPv4}:${EXPERIMENT_STUN_PORT2:-3479}:${EXPERIMENT_STUN_PORT2:-3479}/udp"
+      - "${EXPERIMENT_BIND_IPV4:?Set the instance interface IPv4}:3478:3478/udp"
+      - "${EXPERIMENT_BIND_IPV4:?Set the instance interface IPv4}:3479:3479/udp"
+      - "127.0.0.1:${EXPERIMENT_PANEL_PORT:-19102}:19101/tcp"
     environment:
-      <<: *craftlink-db
-      MCLINK_DB_ENABLED: "1"
+      MCLINK_DB_ENABLED: "0"
       MCLINK_REQUIRE_ACCOUNT: "1"
+      MCLINK_ACCOUNT_FILE: /app/accounts/users.json
       MCLINK_ADMIN_API_ENABLED: "1"
-      MCLINK_STUN_PORT: ${EXPERIMENT_STUN_PORT:-3478}
-      MCLINK_STUN_PORT2: ${EXPERIMENT_STUN_PORT2:-3479}
-      MCLINK_BOOTSTRAP_ADMIN: ${EXPERIMENT_BOOTSTRAP_ADMIN:-}
-    networks: [edge, backend]
+      MCLINK_LITE_PANEL: "1"
+      MCLINK_ADMIN_API_TOKEN: ${EXPERIMENT_ADMIN_TOKEN:?Set the experiment API token}
     volumes:
+      - accounts:/app/accounts
       - status:/app/status
     cpus: 0.5
-    mem_limit: 256m
-    pids_limit: 128
-    logging: *logging
-
-  panel:
-    image: ${EXPERIMENT_PANEL_IMAGE:?Set the experiment panel image}
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:${EXPERIMENT_PANEL_PORT:-19102}:80/tcp"
-    environment:
-      <<: *craftlink-db
-      MCLINK_RELAY_API_URL: http://relay:19101
-      MCLINK_PANEL_TITLE: CraftLink 实验管理面板
-    networks: [edge, backend]
-    depends_on:
-      relay:
-        condition: service_healthy
-    cpus: 0.25
     mem_limit: 128m
     pids_limit: 64
-    logging: *logging
-
-  database:
-    image: ${EXPERIMENT_DATABASE_IMAGE:?Set the MySQL 8 image digest}
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: craftlink_exp
-      MYSQL_USER: craftlink_exp
-      MYSQL_PASSWORD: ${EXPERIMENT_DB_PASSWORD:?Set the experiment database password}
-      MYSQL_ROOT_PASSWORD: ${EXPERIMENT_DB_ROOT_PASSWORD:?Set the experiment database root password}
-    networks: [backend]
-    volumes:
-      - database:/var/lib/mysql
-    healthcheck:
-      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=tcp -h 127.0.0.1 -u "$$MYSQL_USER" -D "$$MYSQL_DATABASE" -e "SELECT 1" >/dev/null']
-      interval: 10s
-      timeout: 4s
-      retries: 6
-      start_period: 90s
-    cpus: 0.5
-    mem_limit: 768m
-    pids_limit: 128
-    logging: *logging
-
-networks:
-  edge:
-    driver: bridge
-  backend:
-    internal: true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
 
 volumes:
-  database:
+  accounts:
   status:

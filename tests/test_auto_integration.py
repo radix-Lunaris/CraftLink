@@ -20,7 +20,7 @@ from mclink.core.auto_stream import AutoManager
 from mclink.core.auto_peer import AutoPeer
 from mclink.core.direct_carry import PeerLink
 from mclink.core.engine import MCLinkEngine
-from mclink.config.settings import ClientConfig
+from mclink.config.settings import APP_VERSION, ClientConfig
 from mclink.core.udp_forward import Forwarder, Receiver
 
 
@@ -111,7 +111,7 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.redirect = contextlib.redirect_stdout(self.output)
         self.redirect.__enter__()
         relay.cfg.REQUIRE_ACCOUNT = False
-        relay.cfg.RELAY_VERSION = "5.1.8"
+        relay.cfg.RELAY_VERSION = APP_VERSION
         relay.rooms.clear()
         self.handlers = set()
         def dispatch(r, w):
@@ -493,7 +493,7 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(ok)
         r, w = await asyncio.open_connection("127.0.0.1", self.port)
         self.writers.append(w)
-        w.write(b"JOIN __mclink__ old old - auto-test ver=5.1.8\n")
+        w.write(f"JOIN __mclink__ old old - auto-test ver={APP_VERSION}\n".encode())
         await w.drain()
         self.assertTrue((await r.readline()).startswith(b"OK JOIN"))
         ok, reason = await owner.set_conn_mode("auto")

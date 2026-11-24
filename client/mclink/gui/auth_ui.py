@@ -231,7 +231,7 @@ class LoginDialog(Dialog):
         self.result = None
         self.allow_cancel = allow_cancel
 
-        self.title(tr("CraftLink 登录"))
+        self.title(cfgmod.build_window_title(tr("CraftLink 登录")))
         self.configure(bg=BG)
         self.resizable(False, False)
         self.transient(master)
@@ -706,7 +706,7 @@ class RoomsDialog(Dialog):
         self._auto_timer = None
         self._busy = False
 
-        self.title("CraftLink 房间列表")
+        self.title(cfgmod.build_window_title("CraftLink 房间列表"))
         self.configure(bg=BG)
         # Bigger than the old 720x460: the fonts grew by a point, the button
         # row needs ~520 px for its labels, and the table gained a row of
@@ -1154,7 +1154,7 @@ class RenameDialog(Dialog):
         self.client_id = client_id
         self.result = None
 
-        self.title(tr("CraftLink 修改用户名"))
+        self.title(cfgmod.build_window_title(tr("CraftLink 修改用户名")))
         self.configure(bg=BG)
         self.resizable(False, False)
         self.transient(master)

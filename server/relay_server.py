@@ -6658,7 +6658,7 @@ async def setup_services():
             )
     else:
         connected = True
-        log("EVENT db.mode storage=memory accounts=disabled reason=MCLINK_DB_ENABLED=0")
+        log("EVENT db.mode", f"storage={store.name}", "database=disabled")
 
     # Runtime settings: panel-editable switches that must not require a
     # container restart. Store first so the panel can talk to it.

@@ -1,22 +1,28 @@
-# 玩家转发实验测试栈
+# CraftLink 轻量实验服
 
-以项目 `craftlink-peer-relay-exp` 部署于 `/opt/craftlink-peer-relay-exp`。在测试机外构建中继和面板镜像，并记录镜像 ID、源码提交和 SHA-256。客户端测试配置使用本次部署对应的域名、端口和严格同版客户端。
+- 客户端入口由测试实例的私有配置指定，使用与中继同版的实验客户端。
+- 部署目录 `/opt/craftlink-peer-relay-exp`，Compose 项目 `craftlink-peer-relay-exp`。
+- 单个中继容器，内存上限 128 MiB，0.5 CPU，带日志轮转。账号文件和状态使用独立卷。轻量面板由中继进程提供。
+- 本次实例盘点发现约 437 MiB 可用内存，MCSync 在运行，Docker 尚未安装。轻量配置的容器限额在当前余量内，仍需测量 Docker 开销和实际峰值。
 
-部署前检查 Docker Engine 和 Compose、主机可用内存、端口、网络子网、UFW 及云安全组。三个容器的内存上限合计 1152 MiB，还需为 Docker 和现有服务保留余量。2026-11-24 的初次盘点显示，临时实例未安装 Docker，可用内存约 437 MiB。该实例需要增加内存余量才能运行完整测试栈。
+## SSH 账号命令
 
-在部署目录创建权限为 `0600` 的 `.env`，指定以下配置。
+登录测试机后进入部署目录。以下命令在中继已经运行时使用。
 
-| 变量 | 配置 |
-|---|---|
-| `EXPERIMENT_RELAY_IMAGE`、`EXPERIMENT_PANEL_IMAGE` | 本次测试的专用镜像引用 |
-| `EXPERIMENT_DATABASE_IMAGE` | 对应平台的 MySQL 8 镜像摘要 |
-| `EXPERIMENT_DB_PASSWORD`、`EXPERIMENT_DB_ROOT_PASSWORD`、`EXPERIMENT_ADMIN_TOKEN` | 分别生成的随机值 |
-| `EXPERIMENT_BOOTSTRAP_ADMIN` | 首次部署的实验管理账号，初始化后从配置中清除 |
-| `EXPERIMENT_BIND_IPV4` | 宿主机实际网卡的 IPv4 |
-| `EXPERIMENT_RELAY_PORT` | TCP/UDP 外部端口，默认 19100 |
-| `EXPERIMENT_STUN_PORT`、`EXPERIMENT_STUN_PORT2` | 连续 UDP 端口，默认 3478/3479。使用其他端口前需要配套客户端支持。 |
-| `EXPERIMENT_PANEL_PORT` | 回环端口，默认 19102，通过 SSH 隧道访问 |
+```sh
+cd /opt/craftlink-peer-relay-exp
+docker compose exec relay python file_accounts.py list
+docker compose exec relay python file_accounts.py add alice
+docker compose exec relay python file_accounts.py delete alice
+docker compose restart relay
+```
 
-在实例上运行 `docker compose config --quiet` 验证插值。为实验端口补充 UFW 规则，并检查 Docker 转发链是否实际执行预期过滤。从外部验证中继 TCP、两个 STUN UDP 端口，以及管理端口不可达。数据库与管理 API 通过项目网络连接。启动前后记录其他服务的状态及监听端口。
+添加时在终端输入密码两次。每批增删完成后重启实验中继，应用新增账号并撤销被删除账号的会话。重启会断开该实验服的在线玩家。账号卷中保存密码哈希。首次部署可用 `docker compose run --rm --no-deps relay python file_accounts.py add alice` 预建账号，再启动服务。
 
-回滚时运行 `docker compose stop` 停止此栈，撤回本次新增的防火墙规则。保留实验卷和日志以便排查。
+## 面板和网络
+
+使用 SSH 本地转发 `-L 19102:127.0.0.1:19102`，然后打开 `http://127.0.0.1:19102/`。输入部署时生成的 `EXPERIMENT_ADMIN_TOKEN`，可查看状态、列出房间、关闭房间。令牌存放在仅部署用户可读的实验 `.env` 中。
+
+设置 `EXPERIMENT_RELAY_IMAGE`、实例实际网卡地址 `EXPERIMENT_BIND_IPV4` 和随机 `EXPERIMENT_ADMIN_TOKEN`，用 `docker compose config --quiet` 预检。启动前后核对 MCSync 和 SSH。实验入口使用 TCP/UDP 19100 与 UDP 3478、3479，面板端口 19102 仅绑定回环。按 Docker 实际运行方式配置 UFW 与转发过滤，从外网验证游戏端口可达以及面板不可达，再复查阿里云安全组。
+
+停止实验服时执行 `docker compose stop`，撤回本次增补的规则，保留账号卷及日志。

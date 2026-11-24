@@ -114,6 +114,9 @@ class MCLinkApp(ClientController):
         Label(brand,text='CraftLink',font=('Segoe UI',19,'bold')).pack(anchor='w')
         Label(self.sidebar,text=f'v{cfgmod.APP_VERSION}',text_color=FG_MUTED,
               font=('Segoe UI',12)).pack(anchor='w',padx=24,pady=(0,20))
+        if cfgmod.INTERNAL_BUILD_LABEL:
+            Label(self.sidebar,text='内测版 · 实验室构建\n仅供内部测试',text_color=WARN,
+                  justify='left',font=('Microsoft YaHei UI',12,'bold')).pack(anchor='w',padx=24,pady=(0,12))
         self.nav_buttons={}
         for key,title in self.PAGE_TITLES.items():
             button=Button(self.sidebar,text=tr(title),width=164,command=lambda name=key:self.show_page(name),
@@ -424,7 +427,7 @@ class MCLinkApp(ClientController):
         if existing is not None and existing.winfo_exists():
             existing.deiconify(); existing.lift(); existing.focus_set()
             return
-        win=Dialog(self.root); win.title(tr('房间成员')); win.geometry('1200x650'); win.minsize(900,500)
+        win=Dialog(self.root); win.title(cfgmod.build_window_title(tr('房间成员'))); win.geometry('1200x650'); win.minsize(900,500)
         win.transient(self.root)
         self.member_window=win
         self.member_hint=Label(win,text='',fg=FG_DIM); self.member_hint.pack(fill='x',padx=22,pady=18)

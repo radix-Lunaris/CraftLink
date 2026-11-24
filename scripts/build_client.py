@@ -42,7 +42,7 @@ def main():
     import PIL
     version_tuple, experimental = windows_version(APP_VERSION)
     file_flags = 0x2 if experimental else 0x0
-    description = "CraftLink Minecraft 联机工具" + ("（实验版）" if experimental else "")
+    description = "CraftLink Minecraft 联机工具" + ("（内部测试 / 实验室构建）" if experimental else "")
     log_dir = ROOT / "logs"
     log_dir.mkdir(exist_ok=True)
     log_path = log_dir / "client-build.log"
